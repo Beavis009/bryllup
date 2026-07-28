@@ -517,20 +517,14 @@ function renderActivationControls() {
     button.className = question.id === activeQuestionId ? "activation-button active" : "activation-button";
     button.classList.add(`type-${question.type}`);
     button.dataset.questionId = question.id;
-    button.title = `${question.category ? `${question.category}: ` : ""}${question.text} (${getQuestionTypeLabel(
-      question.type
-    )})`;
+    button.title = `${question.category ? `${question.category}: ` : ""}${question.text}`;
     button.disabled = !firebaseState;
 
     const number = document.createElement("span");
     number.className = "activation-number";
     number.textContent = question.order;
 
-    const type = document.createElement("span");
-    type.className = "activation-type";
-    type.textContent = getQuestionTypeLabel(question.type);
-
-    button.append(number, type);
+    button.append(number);
     return button;
   });
 
@@ -558,8 +552,7 @@ function renderActiveQuestionPanel() {
 
   activeQuestionLabelEl.textContent = [
     `Aktivt spørgsmål ${activeQuestion.order}`,
-    activeQuestion.category,
-    getQuestionTypeLabel(activeQuestion.type)
+    activeQuestion.category
   ]
     .filter(Boolean)
     .join(" · ");
