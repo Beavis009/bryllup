@@ -101,14 +101,6 @@ function getNumberAnswerInput(questionId) {
   return document.getElementById(`answer-${questionId}`);
 }
 
-function getMinuteAnswerInput(questionId) {
-  return document.getElementById(`answer-${questionId}-minutes`);
-}
-
-function getSecondAnswerInput(questionId) {
-  return document.getElementById(`answer-${questionId}-seconds`);
-}
-
 function sortQuestions(questions) {
   return [...questions].sort((a, b) => a.order - b.order);
 }
@@ -122,16 +114,10 @@ function getQuestionTypeLabel(type) {
 }
 
 function createEmptyAnswerDraft(type) {
-  return normalizeQuestionType(type) === "time"
-    ? {
-        type: "time",
-        minutes: "",
-        seconds: ""
-      }
-    : {
-        type: "number",
-        value: ""
-      };
+  return {
+    type: normalizeQuestionType(type),
+    value: ""
+  };
 }
 
 function getTimeValue(item) {
@@ -288,25 +274,10 @@ function syncVisibleAnswer() {
     return;
   }
 
-  if (question.type === "time") {
-    const minutesInput = getMinuteAnswerInput(activeQuestionId);
-    const secondsInput = getSecondAnswerInput(activeQuestionId);
-
-    if (minutesInput || secondsInput) {
-      activeAnswerDraft = {
-        type: "time",
-        minutes: minutesInput ? minutesInput.value : activeAnswerDraft.minutes || "",
-        seconds: secondsInput ? secondsInput.value : activeAnswerDraft.seconds || ""
-      };
-    }
-
-    return;
-  }
-
   const input = getNumberAnswerInput(activeQuestionId);
   if (input) {
     activeAnswerDraft = {
-      type: "number",
+      type: question.type,
       value: input.value
     };
   }
@@ -330,70 +301,25 @@ function createNumberAnswerField(question) {
   const label = document.createElement("label");
   label.className = "answer-input-label";
 
+  const isTimeQuestion = question.type === "time";
   const text = document.createElement("span");
-  text.textContent = "Tal";
+  text.textContent = isTimeQuestion ? "Antal sekunder" : "Tal";
 
   const input = document.createElement("input");
   input.id = `answer-${question.id}`;
   input.name = question.id;
-  input.type = "text";
-  input.inputMode = "decimal";
+  input.type = "number";
+  input.inputMode = isTimeQuestion ? "numeric" : "decimal";
   input.autocomplete = "off";
-  input.placeholder = "Skriv et tal";
+  input.min = "0";
+  input.step = isTimeQuestion ? "1" : "any";
+  input.placeholder = isTimeQuestion ? "Skriv antal sekunder" : "Skriv et tal";
   input.required = true;
-  input.value = activeAnswerDraft.type === "number" ? activeAnswerDraft.value : "";
-  input.dataset.answerField = "number";
+  input.value = activeAnswerDraft.type === question.type ? activeAnswerDraft.value : "";
+  input.dataset.answerField = question.type;
 
   label.append(text, input);
   return label;
-}
-
-function createTimeSelect({ id, name, value, field }) {
-  const select = document.createElement("select");
-  select.id = id;
-  select.name = name;
-  select.required = true;
-  select.dataset.answerField = field;
-
-  for (let optionValue = 0; optionValue <= 60; optionValue += 1) {
-    const option = document.createElement("option");
-    option.value = String(optionValue);
-    option.textContent = String(optionValue).padStart(2, "0");
-    option.selected = String(value) === String(optionValue);
-    select.append(option);
-  }
-
-  return select;
-}
-
-function createTimeAnswerFields(question) {
-  const group = document.createElement("div");
-  group.className = "time-answer-grid";
-
-  const minutesLabel = document.createElement("label");
-  const minutesText = document.createElement("span");
-  minutesText.textContent = "Minutter";
-  const minutesInput = createTimeSelect({
-    id: `answer-${question.id}-minutes`,
-    name: `${question.id}-minutes`,
-    value: activeAnswerDraft.type === "time" ? activeAnswerDraft.minutes : "",
-    field: "minutes"
-  });
-
-  const secondsLabel = document.createElement("label");
-  const secondsText = document.createElement("span");
-  secondsText.textContent = "Sekunder";
-  const secondsInput = createTimeSelect({
-    id: `answer-${question.id}-seconds`,
-    name: `${question.id}-seconds`,
-    value: activeAnswerDraft.type === "time" ? activeAnswerDraft.seconds : "",
-    field: "seconds"
-  });
-
-  minutesLabel.append(minutesText, minutesInput);
-  secondsLabel.append(secondsText, secondsInput);
-  group.append(minutesLabel, secondsLabel);
-  return group;
 }
 
 function renderQuestionField() {
@@ -440,7 +366,7 @@ function renderQuestionField() {
     return;
   }
 
-  wrapper.append(question.type === "time" ? createTimeAnswerFields(question) : createNumberAnswerField(question));
+  wrapper.append(createNumberAnswerField(question));
   questionFields.replaceChildren(wrapper);
   quizSubmitBtn.hidden = false;
   setQuizDisabled(!isQuestionReady());
@@ -462,12 +388,6 @@ function parseNonNegativeInteger(value) {
   return Number.parseInt(trimmedValue, 10);
 }
 
-function formatTimeAnswer(totalSeconds) {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
 function getPreparedAnswer() {
   const question = getActiveQuestion();
 
@@ -476,19 +396,16 @@ function getPreparedAnswer() {
   }
 
   if (question.type === "time") {
-    const minutes = parseNonNegativeInteger(activeAnswerDraft.minutes || "0");
-    const seconds = parseNonNegativeInteger(activeAnswerDraft.seconds || "0");
+    const seconds = parseNonNegativeInteger(activeAnswerDraft.value);
 
-    if (minutes === null || seconds === null || minutes > 60 || seconds > 60 || minutes + seconds === 0) {
+    if (seconds === null || seconds > 999999) {
       return null;
     }
 
-    const totalSeconds = minutes * 60 + seconds;
-
     return {
-      answer: formatTimeAnswer(totalSeconds),
+      answer: `${seconds} sekunder`,
       answerType: "time",
-      answerValue: totalSeconds
+      answerValue: seconds
     };
   }
 
@@ -685,17 +602,8 @@ function handleAnswerFieldChange(event) {
 
   const question = getActiveQuestion();
 
-  if (question.type === "time") {
-    activeAnswerDraft = {
-      type: "time",
-      minutes: getMinuteAnswerInput(activeQuestionId)?.value || "",
-      seconds: getSecondAnswerInput(activeQuestionId)?.value || ""
-    };
-    return;
-  }
-
   activeAnswerDraft = {
-    type: "number",
+    type: question.type,
     value: getNumberAnswerInput(activeQuestionId)?.value || ""
   };
 }
@@ -717,7 +625,7 @@ quizForm.addEventListener("submit", async (event) => {
 
   if (!firebaseState || !participant || !preparedAnswer) {
     const activeQuestion = getActiveQuestion();
-    showAnswerStatus(activeQuestion?.type === "time" ? "Skriv minutter og sekunder." : "Skriv et tal.");
+    showAnswerStatus(activeQuestion?.type === "time" ? "Skriv antal sekunder." : "Skriv et tal.");
     return;
   }
 

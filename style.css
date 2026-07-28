@@ -321,15 +321,8 @@ textarea {
   resize: vertical;
 }
 
-.answer-input-label,
-.time-answer-grid label {
+.answer-input-label {
   font-weight: 700;
-}
-
-.time-answer-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
 }
 
 button {
@@ -648,8 +641,7 @@ button.secondary {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
-  .question-type-toolbar,
-  .time-answer-grid {
+  .question-type-toolbar {
     grid-template-columns: 1fr;
   }
 
