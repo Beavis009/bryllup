@@ -13,6 +13,7 @@ window.firebaseConfig = {
 window.firebaseSettings = {
   questionsPath: "questions",
   activeQuestionPath: "activeQuestion",
+  participantsPath: "participants",
   submissionsPath: "submissions",
   winnersPath: "winners",
   allowClientClear: false

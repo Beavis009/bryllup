@@ -11,19 +11,28 @@
     <main class="page answer-page">
       <section class="hero">
         <p class="eyebrow">Bryllupsquiz</p>
-        <h1>Svar på det aktive spørgsmål</h1>
-        <p>Skriv dit navn og dit svar. Spørgsmålet opdateres automatisk, når værten skifter.</p>
+        <h1>Deltag i quizzen</h1>
+        <p>Gem dit navn første gang. Derefter husker denne enhed dig via en cookie.</p>
       </section>
 
-      <section class="panel answer-panel">
-        <form id="quiz-form">
+      <section id="identity-panel" class="panel answer-panel">
+        <form id="identity-form">
           <label>
             <span>Navn</span>
             <input id="name" name="name" type="text" placeholder="Skriv dit navn" maxlength="80" required />
           </label>
+          <button type="submit">Gem navn</button>
+          <p id="identity-status" class="status-text" role="status" aria-live="polite"></p>
+        </form>
+      </section>
 
+      <section id="quiz-panel" class="panel answer-panel" hidden>
+        <div class="participant-bar">
+          <span>Du svarer som</span>
+          <strong id="participant-name">-</strong>
+        </div>
+        <form id="quiz-form">
           <div id="question-fields" class="question-fields"></div>
-
           <button type="submit">Gem svar</button>
           <p id="save-status" class="status-text" role="status" aria-live="polite"></p>
         </form>

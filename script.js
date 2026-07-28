@@ -1,20 +1,28 @@
 const FIREBASE_SDK_VERSION = "12.16.0";
 const QUESTION_COUNT = 12;
+const PARTICIPANT_COOKIE_NAME = "bryllupParticipant";
 const FALLBACK_QUESTIONS = Array.from({ length: QUESTION_COUNT }, (_, index) => ({
   id: `q${index + 1}`,
   order: index + 1,
   text: String(index + 1)
 }));
 
-const form = document.getElementById("quiz-form");
+const identityPanel = document.getElementById("identity-panel");
+const quizPanel = document.getElementById("quiz-panel");
+const identityForm = document.getElementById("identity-form");
+const quizForm = document.getElementById("quiz-form");
 const questionFields = document.getElementById("question-fields");
+const identityStatusEl = document.getElementById("identity-status");
 const saveStatusEl = document.getElementById("save-status");
 const nameInput = document.getElementById("name");
-const submitBtn = form.querySelector('button[type="submit"]');
+const participantNameEl = document.getElementById("participant-name");
+const identitySubmitBtn = identityForm.querySelector('button[type="submit"]');
+const quizSubmitBtn = quizForm.querySelector('button[type="submit"]');
 const firebaseConfig = window.firebaseConfig || {};
 const firebaseSettings = {
   questionsPath: "questions",
   activeQuestionPath: "activeQuestion",
+  participantsPath: "participants",
   submissionsPath: "submissions",
   ...(window.firebaseSettings || {})
 };
@@ -22,16 +30,56 @@ const firebaseSettings = {
 let questionsCache = [...FALLBACK_QUESTIONS];
 let activeQuestionId = "q1";
 let activeAnswer = "";
+let participant = readParticipantCookie();
 let firebaseState = null;
 let hasLoadedQuestions = false;
 let hasLoadedActiveQuestion = false;
-let statusTimer;
+let identityStatusTimer;
+let answerStatusTimer;
 
 function hasFirebaseConfig(config) {
   return ["apiKey", "authDomain", "databaseURL", "projectId", "appId"].every((key) => {
     const value = config[key];
     return typeof value === "string" && value.trim().length > 0;
   });
+}
+
+function getCookie(name) {
+  const prefix = `${name}=`;
+  return document.cookie
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(prefix))
+    ?.slice(prefix.length);
+}
+
+function setCookie(name, value, maxAgeSeconds) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; Max-Age=${maxAgeSeconds}; Path=/; SameSite=Lax`;
+}
+
+function readParticipantCookie() {
+  const rawValue = getCookie(PARTICIPANT_COOKIE_NAME);
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(decodeURIComponent(rawValue));
+    if (typeof parsed.id === "string" && typeof parsed.name === "string" && parsed.name.trim()) {
+      return {
+        id: parsed.id,
+        name: parsed.name.trim()
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function saveParticipantCookie(nextParticipant) {
+  setCookie(PARTICIPANT_COOKIE_NAME, JSON.stringify(nextParticipant), 60 * 60 * 24 * 365);
 }
 
 function getActiveQuestion() {
@@ -46,13 +94,17 @@ function sortQuestions(questions) {
   return [...questions].sort((a, b) => a.order - b.order);
 }
 
-function isReady() {
-  return Boolean(firebaseState && hasLoadedQuestions && hasLoadedActiveQuestion);
+function isQuestionReady() {
+  return Boolean(firebaseState && hasLoadedQuestions && hasLoadedActiveQuestion && participant);
 }
 
-function setFormDisabled(disabled) {
+function setIdentityDisabled(disabled) {
   nameInput.disabled = disabled;
-  submitBtn.disabled = disabled;
+  identitySubmitBtn.disabled = disabled;
+}
+
+function setQuizDisabled(disabled) {
+  quizSubmitBtn.disabled = disabled;
 
   const input = getAnswerInput(activeQuestionId);
   if (input) {
@@ -60,19 +112,47 @@ function setFormDisabled(disabled) {
   }
 }
 
-function showStatus(message, options = {}) {
+function showIdentityStatus(message, options = {}) {
+  identityStatusEl.textContent = message;
+
+  if (options.persistent) {
+    return;
+  }
+
+  window.clearTimeout(identityStatusTimer);
+  identityStatusTimer = window.setTimeout(() => {
+    if (identityStatusEl.textContent === message) {
+      identityStatusEl.textContent = "";
+    }
+  }, 3000);
+}
+
+function showAnswerStatus(message, options = {}) {
   saveStatusEl.textContent = message;
 
   if (options.persistent) {
     return;
   }
 
-  window.clearTimeout(statusTimer);
-  statusTimer = window.setTimeout(() => {
+  window.clearTimeout(answerStatusTimer);
+  answerStatusTimer = window.setTimeout(() => {
     if (saveStatusEl.textContent === message) {
       saveStatusEl.textContent = "";
     }
   }, 3000);
+}
+
+function showIdentityStep() {
+  identityPanel.hidden = false;
+  quizPanel.hidden = true;
+  setIdentityDisabled(!firebaseState);
+}
+
+function showQuizStep() {
+  identityPanel.hidden = true;
+  quizPanel.hidden = false;
+  participantNameEl.textContent = participant ? participant.name : "-";
+  renderQuestionField();
 }
 
 function normalizeQuestion(id, data = {}) {
@@ -151,7 +231,7 @@ function renderQuestionField() {
 
   wrapper.append(meta, title, textarea);
   questionFields.replaceChildren(wrapper);
-  setFormDisabled(!isReady());
+  setQuizDisabled(!isQuestionReady());
 }
 
 function getAnswerPageUrl() {
@@ -161,13 +241,31 @@ function getAnswerPageUrl() {
   return url.toString();
 }
 
-async function saveSubmission(name, answer) {
+async function createParticipant(name) {
+  const { participantsRef, push, serverTimestamp, set } = firebaseState;
+  const newParticipantRef = push(participantsRef);
+
+  await set(newParticipantRef, {
+    name,
+    createdAt: serverTimestamp(),
+    createdAtClient: new Date().toISOString(),
+    pageUrl: getAnswerPageUrl()
+  });
+
+  return {
+    id: newParticipantRef.key,
+    name
+  };
+}
+
+async function saveSubmission(answer) {
   const { push, serverTimestamp, set, submissionsRef } = firebaseState;
   const newSubmissionRef = push(submissionsRef);
   const question = getActiveQuestion();
 
   await set(newSubmissionRef, {
-    name,
+    participantId: participant.id,
+    name: participant.name,
     questionId: question.id,
     question: question.text,
     answer,
@@ -178,24 +276,34 @@ async function saveSubmission(name, answer) {
 }
 
 function updateReadyState() {
-  renderQuestionField();
+  if (participant) {
+    showQuizStep();
+  } else {
+    showIdentityStep();
+  }
 
-  if (isReady()) {
-    setFormDisabled(false);
-    showStatus("Klar til svar");
+  if (isQuestionReady()) {
+    setQuizDisabled(false);
+    showAnswerStatus("Klar til svar");
   }
 }
 
 async function initFirebase() {
-  renderQuestionField();
-  setFormDisabled(true);
+  if (participant) {
+    showQuizStep();
+  } else {
+    showIdentityStep();
+  }
+
+  setIdentityDisabled(true);
+  setQuizDisabled(true);
 
   if (!hasFirebaseConfig(firebaseConfig)) {
-    showStatus("Indsæt Firebase config i firebase-config.js.", { persistent: true });
+    showIdentityStatus("Indsæt Firebase config i firebase-config.js.", { persistent: true });
     return;
   }
 
-  showStatus("Forbinder til Firebase...", { persistent: true });
+  showIdentityStatus("Forbinder til Firebase...", { persistent: true });
 
   try {
     const [{ initializeApp }, database] = await Promise.all([
@@ -206,15 +314,20 @@ async function initFirebase() {
     const db = database.getDatabase(app);
     const questionsRef = database.ref(db, firebaseSettings.questionsPath);
     const activeQuestionRef = database.ref(db, firebaseSettings.activeQuestionPath);
+    const participantsRef = database.ref(db, firebaseSettings.participantsPath);
     const submissionsRef = database.ref(db, firebaseSettings.submissionsPath);
 
     firebaseState = {
       onValue: database.onValue,
+      participantsRef,
       push: database.push,
       serverTimestamp: database.serverTimestamp,
       set: database.set,
       submissionsRef
     };
+
+    setIdentityDisabled(false);
+    showIdentityStatus("");
 
     firebaseState.onValue(
       questionsRef,
@@ -224,8 +337,8 @@ async function initFirebase() {
         updateReadyState();
       },
       (error) => {
-        setFormDisabled(true);
-        showStatus(`Firebase-fejl: ${error.message}`, { persistent: true });
+        setQuizDisabled(true);
+        showAnswerStatus(`Firebase-fejl: ${error.message}`, { persistent: true });
       }
     );
 
@@ -244,15 +357,40 @@ async function initFirebase() {
         updateReadyState();
       },
       (error) => {
-        setFormDisabled(true);
-        showStatus(`Firebase-fejl: ${error.message}`, { persistent: true });
+        setQuizDisabled(true);
+        showAnswerStatus(`Firebase-fejl: ${error.message}`, { persistent: true });
       }
     );
   } catch (error) {
-    setFormDisabled(true);
-    showStatus(`Kunne ikke starte Firebase: ${error.message}`, { persistent: true });
+    setIdentityDisabled(true);
+    setQuizDisabled(true);
+    showIdentityStatus(`Kunne ikke starte Firebase: ${error.message}`, { persistent: true });
   }
 }
+
+identityForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const name = nameInput.value.trim();
+
+  if (!firebaseState || !name) {
+    showIdentityStatus("Skriv dit navn.");
+    return;
+  }
+
+  setIdentityDisabled(true);
+  showIdentityStatus("Gemmer navn...");
+
+  try {
+    participant = await createParticipant(name);
+    saveParticipantCookie(participant);
+    showQuizStep();
+    showAnswerStatus("Klar til svar");
+  } catch (error) {
+    showIdentityStatus(`Kunne ikke gemme navn: ${error.message}`, { persistent: true });
+  } finally {
+    setIdentityDisabled(false);
+  }
+});
 
 questionFields.addEventListener("input", (event) => {
   if (event.target.id === `answer-${activeQuestionId}`) {
@@ -260,30 +398,29 @@ questionFields.addEventListener("input", (event) => {
   }
 });
 
-form.addEventListener("submit", async (event) => {
+quizForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const name = nameInput.value.trim();
   syncVisibleAnswer();
   const answer = activeAnswer.trim();
 
-  if (!firebaseState || !name || !answer) {
-    showStatus("Udfyld navn og svar.");
+  if (!firebaseState || !participant || !answer) {
+    showAnswerStatus("Skriv et svar.");
     return;
   }
 
-  setFormDisabled(true);
-  showStatus("Gemmer...");
+  setQuizDisabled(true);
+  showAnswerStatus("Gemmer...");
 
   try {
-    await saveSubmission(name, answer);
+    await saveSubmission(answer);
     activeAnswer = "";
     renderQuestionField();
     getAnswerInput(activeQuestionId).focus();
-    showStatus("Svar gemt");
+    showAnswerStatus("Svar gemt");
   } catch (error) {
-    showStatus(`Kunne ikke gemme: ${error.message}`, { persistent: true });
+    showAnswerStatus(`Kunne ikke gemme: ${error.message}`, { persistent: true });
   } finally {
-    setFormDisabled(false);
+    setQuizDisabled(false);
   }
 });
 

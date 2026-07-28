@@ -21,11 +21,36 @@
         ".validate": false
       }
     },
+    "participants": {
+      ".read": true,
+      "$participantId": {
+        ".write": "!data.exists() && newData.exists()",
+        ".validate": "newData.hasChildren(['name', 'createdAt', 'createdAtClient', 'pageUrl'])",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 1000"
+        },
+        "createdAtClient": {
+          ".validate": "newData.isString() && newData.val().length <= 40"
+        },
+        "pageUrl": {
+          ".validate": "newData.isString() && newData.val().length <= 500"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
     "submissions": {
       ".read": true,
       "$submissionId": {
         ".write": "!data.exists() && newData.exists()",
-        ".validate": "newData.hasChildren(['name', 'questionId', 'question', 'answer', 'createdAt', 'createdAtClient', 'pageUrl'])",
+        ".validate": "newData.hasChildren(['participantId', 'name', 'questionId', 'question', 'answer', 'createdAt', 'createdAtClient', 'pageUrl'])",
+        "participantId": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
+        },
         "name": {
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
         },
