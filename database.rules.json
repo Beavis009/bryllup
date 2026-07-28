@@ -128,14 +128,29 @@
       ".read": true,
       "$questionId": {
         ".write": "newData.exists() && $questionId.matches(/^q(0|[1-9]|1[0-2])$/)",
-        ".validate": "newData.hasChildren(['questionId', 'question', 'submissionId', 'winnerName', 'answer', 'savedAt', 'savedAtClient'])",
+        ".validate": "newData.hasChildren(['questionId', 'question', 'questionCategory', 'questionType', 'correctAnswer', 'correctAnswerValue', 'submissionId', 'participantId', 'winnerName', 'answer', 'answerType', 'answerValue', 'distance', 'answeredAt', 'answeredAtClient', 'savedAt', 'savedAtClient'])",
         "questionId": {
           ".validate": "newData.isString() && newData.val() == $questionId"
         },
         "question": {
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 250"
         },
+        "questionCategory": {
+          ".validate": "newData.isString() && newData.val().length <= 80"
+        },
+        "questionType": {
+          ".validate": "newData.isString() && (newData.val() == 'number' || newData.val() == 'time')"
+        },
+        "correctAnswer": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+        },
+        "correctAnswerValue": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 999999"
+        },
         "submissionId": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
+        },
+        "participantId": {
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
         },
         "winnerName": {
@@ -143,6 +158,21 @@
         },
         "answer": {
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+        },
+        "answerType": {
+          ".validate": "newData.isString() && (newData.val() == 'number' || newData.val() == 'time')"
+        },
+        "answerValue": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 999999"
+        },
+        "distance": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 999999"
+        },
+        "answeredAt": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 1000"
+        },
+        "answeredAtClient": {
+          ".validate": "newData.isString() && newData.val().length <= 40"
         },
         "savedAt": {
           ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 1000"

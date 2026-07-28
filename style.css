@@ -514,6 +514,14 @@ button.secondary {
   gap: 1rem;
 }
 
+.answer-row-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+}
+
 .answer-row-header span,
 .participant-row span {
   color: var(--muted);
@@ -526,6 +534,34 @@ button.secondary {
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   padding: 0.85rem;
+}
+
+.live-answer-row.current-winner-answer {
+  border-color: rgba(125, 211, 252, 0.58);
+  background: rgba(45, 212, 191, 0.12);
+}
+
+.live-answer-row.previous-winner-answer {
+  opacity: 0.68;
+}
+
+.answer-badge {
+  border: 1px solid rgba(125, 211, 252, 0.46);
+  border-radius: 999px;
+  color: var(--ok);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+}
+
+.winner-panel {
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.winner-heading {
+  margin-bottom: 0.75rem;
 }
 
 .winner-block {
@@ -541,8 +577,13 @@ button.secondary {
   background: rgba(52, 211, 153, 0.1);
 }
 
+.winner-announcement {
+  border-color: rgba(125, 211, 252, 0.4);
+}
+
 .winner-block strong {
   display: block;
+  font-size: 1.35rem;
   margin: 0.15rem 0;
 }
 

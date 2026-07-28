@@ -1,20 +1,98 @@
 const FIREBASE_SDK_VERSION = "12.16.0";
-const NUMBERED_QUESTION_COUNT = 12;
 const QUESTION_ID_PATTERN = /^q(0|[1-9]|1[0-2])$/;
 const QUESTION_TYPES = ["number", "time"];
 const FALLBACK_QUESTIONS = [
   {
     id: "q0",
     order: 0,
-    text: "Hvormange gange på en dag siger Anna GRØNDAHL!",
+    category: "Testspørgsmål",
+    text: 'Hvor mange gange siger Anna "Grøndahl!" i løbet af en helt almindelig uge?',
     type: "number"
   },
-  ...Array.from({ length: NUMBERED_QUESTION_COUNT }, (_, index) => ({
-    id: `q${index + 1}`,
-    order: index + 1,
-    text: String(index + 1),
+  {
+    id: "q1",
+    order: 1,
+    category: "Samarbejdsopgave",
+    text: "Hvor lang tid tager det Kasper at lave en Old Fashioned, når Anna læser opskriften højt for ham?",
+    type: "time"
+  },
+  {
+    id: "q2",
+    order: 2,
+    category: "Spørgsmål",
+    text: "Hvilket husnummer bor Anna og Kasper i?",
     type: "number"
-  }))
+  },
+  {
+    id: "q3",
+    order: 3,
+    category: "Kasper opgave",
+    text: "Hvor mange vingummibamser kan Kasper flytte fra én skål til en anden på 30 sekunder?",
+    type: "number"
+  },
+  {
+    id: "q4",
+    order: 4,
+    category: "Anna video",
+    text: "Hvor mange Disney-karakterer kan Anna nævne på 30 sekunder?",
+    type: "number"
+  },
+  {
+    id: "q5",
+    order: 5,
+    category: "Anna opgave",
+    text: "Hvor mange Disney-citater kan Anna gætte på 30 sekunder?",
+    type: "number"
+  },
+  {
+    id: "q6",
+    order: 6,
+    category: "Kasper video",
+    text: "Hvor længe kan Kasper blive stående på et surfbræt på en kunstig bølge?",
+    type: "time"
+  },
+  {
+    id: "q7",
+    order: 7,
+    category: "Spørgsmål",
+    text: "Hvor mange dækskift er der blevet lavet hos Lykkegårdens Auto i 2026?",
+    type: "number"
+  },
+  {
+    id: "q8",
+    order: 8,
+    category: "Kasper opgave",
+    text: "Hvor lang tid tager det Kasper at binde et slips?",
+    type: "time"
+  },
+  {
+    id: "q9",
+    order: 9,
+    category: "Anna video",
+    text: "Hvor mange balloner kan Anna puste op på 30 sekunder?",
+    type: "number"
+  },
+  {
+    id: "q10",
+    order: 10,
+    category: "Anna opgave",
+    text: "Hvor lang tid tager det Anna at lægge et puslespil med 8 brikker?",
+    type: "time"
+  },
+  {
+    id: "q11",
+    order: 11,
+    category: "Kasper video",
+    text: "Hvor lang tid tager det Kasper at slå 5 søm i?",
+    type: "time"
+  },
+  {
+    id: "q12",
+    order: 12,
+    category: "Samarbejdsopgave",
+    text: "Hvor lang tid tager det Anna og Kasper at skifte betræk på en dyne og en pude?",
+    type: "time"
+  }
 ];
 
 const qrImage = document.getElementById("qr-code");
@@ -29,6 +107,12 @@ const activeQuestionLabelEl = document.getElementById("active-question-label");
 const activeQuestionTitleEl = document.getElementById("active-question-title");
 const activeAnswerCountEl = document.getElementById("active-answer-count");
 const activeAnswerListEl = document.getElementById("active-answer-list");
+const winnerCurrentEl = document.getElementById("winner-current");
+const winnerFormEl = document.getElementById("winner-form");
+const winnerTargetLabelEl = document.getElementById("winner-target-label");
+const winnerTargetInputEl = document.getElementById("winner-target");
+const winnerSaveBtn = document.getElementById("winner-save");
+const winnerStatusEl = document.getElementById("winner-status");
 const participantCountEl = document.getElementById("participant-count");
 const participantsListEl = document.getElementById("participants-list");
 const firebaseConfig = window.firebaseConfig || {};
@@ -38,6 +122,7 @@ const firebaseSettings = {
   answersPath: "answers",
   participantsPath: "participants",
   submissionsPath: "submissions",
+  winnersPath: "winners",
   ...(window.firebaseSettings || {})
 };
 
@@ -45,8 +130,10 @@ let questionsCache = [...FALLBACK_QUESTIONS];
 let participantsCache = [];
 let answersCache = [];
 let legacySubmissionsCache = [];
+let winnersCache = {};
 let activeQuestionId = "q1";
 let firebaseState = null;
+let winnerStatusTimer;
 
 function hasFirebaseConfig(config) {
   return ["apiKey", "authDomain", "databaseURL", "projectId", "appId"].every((key) => {
@@ -108,11 +195,14 @@ function normalizeQuestion(id, data = {}) {
   const fallback = FALLBACK_QUESTIONS.find((question) => question.id === id);
   const text = typeof data.text === "string" && data.text.trim() ? data.text.trim() : fallback ? fallback.text : id;
   const order = typeof data.order === "number" ? data.order : fallback ? fallback.order : fallbackIndex;
+  const category =
+    typeof data.category === "string" && data.category.trim() ? data.category.trim() : fallback?.category || "";
   const type = normalizeQuestionType(typeof data.type === "string" ? data.type : fallback?.type);
 
   return {
     id,
     order,
+    category,
     text,
     type
   };
@@ -206,6 +296,50 @@ function normalizeAnswers(data = {}) {
     .sort((a, b) => getTimeValue(b) - getTimeValue(a));
 }
 
+function normalizeWinner(questionId, data = {}) {
+  if (!QUESTION_ID_PATTERN.test(questionId) || !data || typeof data !== "object") {
+    return null;
+  }
+
+  const storedQuestionId = typeof data.questionId === "string" ? data.questionId : questionId;
+  const winnerName = typeof data.winnerName === "string" ? data.winnerName.trim() : "";
+  const answer = typeof data.answer === "string" ? data.answer.trim() : "";
+  const participantId = typeof data.participantId === "string" ? data.participantId : "";
+
+  if (storedQuestionId !== questionId || !winnerName || !answer || !participantId) {
+    return null;
+  }
+
+  return {
+    questionId,
+    question: typeof data.question === "string" ? data.question : "",
+    questionCategory: typeof data.questionCategory === "string" ? data.questionCategory : "",
+    questionType: normalizeQuestionType(data.questionType),
+    correctAnswer: typeof data.correctAnswer === "string" ? data.correctAnswer : "",
+    correctAnswerValue: typeof data.correctAnswerValue === "number" ? data.correctAnswerValue : null,
+    submissionId: typeof data.submissionId === "string" ? data.submissionId : "",
+    participantId,
+    winnerName,
+    answer,
+    answerType: normalizeQuestionType(data.answerType),
+    answerValue: typeof data.answerValue === "number" ? data.answerValue : null,
+    distance: typeof data.distance === "number" ? data.distance : null,
+    answeredAt: typeof data.answeredAt === "number" ? data.answeredAt : 0,
+    answeredAtClient: typeof data.answeredAtClient === "string" ? data.answeredAtClient : "",
+    savedAt: typeof data.savedAt === "number" ? data.savedAt : 0,
+    savedAtClient: typeof data.savedAtClient === "string" ? data.savedAtClient : ""
+  };
+}
+
+function normalizeWinners(data = {}) {
+  return Object.fromEntries(
+    Object.entries(data)
+      .map(([questionId, winner]) => normalizeWinner(questionId, winner))
+      .filter(Boolean)
+      .map((winner) => [winner.questionId, winner])
+  );
+}
+
 function getDisplayAnswersForQuestion(questionId) {
   const canonicalAnswers = answersCache.filter((answer) => answer.questionId === questionId);
   const canonicalKeys = new Set(
@@ -228,6 +362,53 @@ function getDisplayAnswersForQuestion(questionId) {
   return [...canonicalAnswers, ...legacyAnswers].sort((a, b) => getTimeValue(b) - getTimeValue(a));
 }
 
+function getWinnerParticipantIds(exceptQuestionId = "") {
+  return new Set(
+    Object.values(winnersCache)
+      .filter((winner) => winner.questionId !== exceptQuestionId)
+      .map((winner) => winner.participantId)
+      .filter(Boolean)
+  );
+}
+
+function hasParticipantWon(participantId, exceptQuestionId = "") {
+  return Boolean(participantId && getWinnerParticipantIds(exceptQuestionId).has(participantId));
+}
+
+function getTieBreakTimeValue(answer) {
+  const timeValue = getTimeValue(answer);
+  return timeValue || Number.MAX_SAFE_INTEGER;
+}
+
+function getValidWinnerAnswers(questionId) {
+  return getDisplayAnswersForQuestion(questionId).filter((answer) => {
+    return answer.participantId && typeof answer.answerValue === "number" && Number.isFinite(answer.answerValue);
+  });
+}
+
+function selectWinnerCandidate(question, correctAnswerValue) {
+  const previousWinnerIds = getWinnerParticipantIds(question.id);
+
+  return getValidWinnerAnswers(question.id)
+    .filter((answer) => !previousWinnerIds.has(answer.participantId))
+    .map((answer) => ({
+      ...answer,
+      distance: Math.abs(answer.answerValue - correctAnswerValue)
+    }))
+    .sort((a, b) => {
+      if (a.distance !== b.distance) {
+        return a.distance - b.distance;
+      }
+
+      const timeDifference = getTieBreakTimeValue(a) - getTieBreakTimeValue(b);
+      if (timeDifference !== 0) {
+        return timeDifference;
+      }
+
+      return a.id.localeCompare(b.id, "da-DK");
+    })[0];
+}
+
 function getActiveQuestion() {
   return questionsCache.find((question) => question.id === activeQuestionId) || questionsCache[0];
 }
@@ -248,6 +429,69 @@ function showQuestionTypeStatus(message) {
       questionTypeStatusEl.textContent = "";
     }
   }, 2500);
+}
+
+function showWinnerStatus(message, options = {}) {
+  winnerStatusEl.textContent = message;
+
+  if (options.persistent) {
+    window.clearTimeout(winnerStatusTimer);
+    return;
+  }
+
+  window.clearTimeout(winnerStatusTimer);
+  winnerStatusTimer = window.setTimeout(() => {
+    if (winnerStatusEl.textContent === message) {
+      winnerStatusEl.textContent = "";
+    }
+  }, 3500);
+}
+
+function parseCorrectAnswerValue(rawValue, type) {
+  const normalizedType = normalizeQuestionType(type);
+  const normalizedValue = String(rawValue || "")
+    .trim()
+    .replace(",", ".");
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (normalizedType === "time" && !/^\d+$/.test(normalizedValue)) {
+    return null;
+  }
+
+  const value = Number(normalizedValue);
+
+  if (!Number.isFinite(value) || value < 0 || value > 999999) {
+    return null;
+  }
+
+  return normalizedType === "time" ? Math.trunc(value) : value;
+}
+
+function formatAnswerValue(type, value) {
+  if (!Number.isFinite(value)) {
+    return "";
+  }
+
+  if (normalizeQuestionType(type) === "time") {
+    return `${value} sekunder`;
+  }
+
+  return String(value).replace(".", ",");
+}
+
+function formatDistance(questionType, distance) {
+  if (!Number.isFinite(distance)) {
+    return "";
+  }
+
+  if (distance === 0) {
+    return "Ramte præcist";
+  }
+
+  return normalizeQuestionType(questionType) === "time" ? `Afvigelse: ${distance} sek.` : `Afvigelse: ${distance}`;
 }
 
 function setupQrCode() {
@@ -273,7 +517,9 @@ function renderActivationControls() {
     button.className = question.id === activeQuestionId ? "activation-button active" : "activation-button";
     button.classList.add(`type-${question.type}`);
     button.dataset.questionId = question.id;
-    button.title = `${question.text} (${getQuestionTypeLabel(question.type)})`;
+    button.title = `${question.category ? `${question.category}: ` : ""}${question.text} (${getQuestionTypeLabel(
+      question.type
+    )})`;
     button.disabled = !firebaseState;
 
     const number = document.createElement("span");
@@ -304,26 +550,44 @@ function renderActiveQuestionPanel() {
     activeQuestionTitleEl.textContent = "-";
     activeAnswerCountEl.textContent = "0 svar";
     activeAnswerListEl.replaceChildren(createEmptyMessage("Intet aktivt spørgsmål."));
+    renderWinnerPanel(null, []);
     return;
   }
 
   const activeAnswers = getDisplayAnswersForQuestion(activeQuestion.id);
 
-  activeQuestionLabelEl.textContent = `Aktivt spørgsmål ${activeQuestion.order} · ${getQuestionTypeLabel(activeQuestion.type)}`;
+  activeQuestionLabelEl.textContent = [
+    `Aktivt spørgsmål ${activeQuestion.order}`,
+    activeQuestion.category,
+    getQuestionTypeLabel(activeQuestion.type)
+  ]
+    .filter(Boolean)
+    .join(" · ");
   activeQuestionTitleEl.textContent = activeQuestion.text;
   activeAnswerCountEl.textContent = formatAnswerCount(activeAnswers.length);
 
   if (!activeAnswers.length) {
     activeAnswerListEl.replaceChildren(createEmptyMessage("Ingen svar på dette spørgsmål endnu."));
+    renderWinnerPanel(activeQuestion, activeAnswers);
     return;
   }
 
   activeAnswerListEl.replaceChildren(...activeAnswers.map(createAnswerRow));
+  renderWinnerPanel(activeQuestion, activeAnswers);
 }
 
 function createAnswerRow(submission) {
   const row = document.createElement("article");
   row.className = "answer-row live-answer-row";
+  const currentWinner = winnersCache[submission.questionId];
+  const isCurrentWinner = currentWinner?.participantId === submission.participantId;
+  const hasWonAnotherQuestion = hasParticipantWon(submission.participantId, submission.questionId);
+
+  if (isCurrentWinner) {
+    row.classList.add("current-winner-answer");
+  } else if (hasWonAnotherQuestion) {
+    row.classList.add("previous-winner-answer");
+  }
 
   const header = document.createElement("div");
   header.className = "answer-row-header";
@@ -331,15 +595,95 @@ function createAnswerRow(submission) {
   const name = document.createElement("strong");
   name.textContent = submission.name;
 
+  const meta = document.createElement("div");
+  meta.className = "answer-row-meta";
+
   const time = document.createElement("span");
   time.textContent = formatClock(submission);
+
+  meta.append(time);
+
+  if (isCurrentWinner || hasWonAnotherQuestion) {
+    const badge = document.createElement("span");
+    badge.className = "answer-badge";
+    badge.textContent = isCurrentWinner ? "Vinder" : "Har vundet";
+    meta.append(badge);
+  }
 
   const answer = document.createElement("p");
   answer.textContent = submission.answer;
 
-  header.append(name, time);
+  header.append(name, meta);
   row.append(header, answer);
   return row;
+}
+
+function renderWinnerPanel(activeQuestion, activeAnswers) {
+  if (!activeQuestion) {
+    winnerFormEl.hidden = true;
+    winnerCurrentEl.replaceChildren(createEmptyMessage("Intet aktivt spørgsmål."));
+    return;
+  }
+
+  const currentWinner = winnersCache[activeQuestion.id];
+  const inputIsFocused = document.activeElement === winnerTargetInputEl;
+
+  winnerFormEl.hidden = false;
+  winnerTargetLabelEl.textContent = activeQuestion.type === "time" ? "Rigtigt svar i sekunder" : "Rigtigt svar";
+  winnerTargetInputEl.placeholder = activeQuestion.type === "time" ? "Antal sekunder" : "Rigtigt tal";
+  winnerTargetInputEl.inputMode = activeQuestion.type === "time" ? "numeric" : "decimal";
+  winnerTargetInputEl.step = activeQuestion.type === "time" ? "1" : "any";
+  winnerTargetInputEl.disabled = !firebaseState;
+  winnerSaveBtn.disabled = !firebaseState || !activeAnswers.length;
+
+  if (currentWinner) {
+    if (!inputIsFocused && currentWinner.correctAnswerValue !== null) {
+      winnerTargetInputEl.value = String(currentWinner.correctAnswerValue);
+    }
+
+    winnerCurrentEl.replaceChildren(createWinnerBlock(currentWinner, activeQuestion));
+    return;
+  }
+
+  if (!inputIsFocused) {
+    winnerTargetInputEl.value = "";
+  }
+
+  winnerCurrentEl.replaceChildren(createEmptyMessage("Ingen vinder annonceret endnu."));
+}
+
+function createWinnerBlock(winner, question) {
+  const block = document.createElement("article");
+  block.className = "winner-block winner-announcement has-winner";
+
+  const label = document.createElement("span");
+  label.textContent = `Spørgsmål ${question.order} · annonceret vinder`;
+
+  const name = document.createElement("strong");
+  name.textContent = winner.winnerName;
+
+  const answer = document.createElement("p");
+  answer.textContent = `Svar: ${winner.answer}`;
+
+  const metaParts = [
+    `Facit: ${winner.correctAnswer || formatAnswerValue(question.type, winner.correctAnswerValue)}`,
+    formatDistance(question.type, winner.distance)
+  ].filter(Boolean);
+
+  const answeredAt = formatClock({
+    createdAt: winner.answeredAt,
+    createdAtClient: winner.answeredAtClient
+  });
+
+  if (answeredAt) {
+    metaParts.push(`Svarede ${answeredAt}`);
+  }
+
+  const meta = document.createElement("p");
+  meta.textContent = metaParts.join(" · ");
+
+  block.append(label, name, answer, meta);
+  return block;
 }
 
 function renderParticipants() {
@@ -447,6 +791,75 @@ async function setQuestionType(type) {
   }
 }
 
+function buildWinnerPayload(question, candidate, correctAnswerValue) {
+  const answeredAt = getTimeValue(candidate);
+
+  return {
+    questionId: question.id,
+    question: question.text,
+    questionCategory: question.category || "",
+    questionType: question.type,
+    correctAnswer: formatAnswerValue(question.type, correctAnswerValue),
+    correctAnswerValue,
+    submissionId: candidate.id,
+    participantId: candidate.participantId,
+    winnerName: candidate.name,
+    answer: candidate.answer,
+    answerType: candidate.answerType,
+    answerValue: candidate.answerValue,
+    distance: candidate.distance,
+    answeredAt,
+    answeredAtClient: candidate.createdAtClient || "",
+    savedAt: firebaseState.serverTimestamp(),
+    savedAtClient: new Date().toISOString()
+  };
+}
+
+async function saveWinner(event) {
+  event.preventDefault();
+
+  const activeQuestion = getActiveQuestion();
+
+  if (!firebaseState || !activeQuestion) {
+    return;
+  }
+
+  const correctAnswerValue = parseCorrectAnswerValue(winnerTargetInputEl.value, activeQuestion.type);
+  if (correctAnswerValue === null) {
+    showWinnerStatus(
+      activeQuestion.type === "time" ? "Skriv det rigtige svar som hele sekunder." : "Skriv det rigtige svar som et tal."
+    );
+    return;
+  }
+
+  const validAnswers = getValidWinnerAnswers(activeQuestion.id);
+  const candidate = selectWinnerCandidate(activeQuestion, correctAnswerValue);
+
+  if (!candidate) {
+    const previousWinnerCount = validAnswers.filter((answer) => hasParticipantWon(answer.participantId, activeQuestion.id))
+      .length;
+    showWinnerStatus(
+      previousWinnerCount
+        ? "Alle gyldige svar er fra personer, der allerede har vundet."
+        : "Der er ingen gyldige numeriske svar endnu."
+    );
+    return;
+  }
+
+  winnerSaveBtn.disabled = true;
+  showWinnerStatus("Annoncerer vinder...");
+
+  try {
+    const { getWinnerRef, set } = firebaseState;
+    await set(getWinnerRef(activeQuestion.id), buildWinnerPayload(activeQuestion, candidate, correctAnswerValue));
+    showWinnerStatus(`Vinder annonceret for spørgsmål ${activeQuestion.order}: ${candidate.name}.`);
+  } catch (error) {
+    showWinnerStatus(`Kunne ikke gemme vinder: ${error.message}`, { persistent: true });
+  } finally {
+    renderWinnerPanel(activeQuestion, getDisplayAnswersForQuestion(activeQuestion.id));
+  }
+}
+
 async function initFirebase() {
   renderActivationControls();
   renderActiveQuestionPanel();
@@ -470,10 +883,12 @@ async function initFirebase() {
     const answersRef = database.ref(db, firebaseSettings.answersPath);
     const participantsRef = database.ref(db, firebaseSettings.participantsPath);
     const submissionsRef = database.ref(db, firebaseSettings.submissionsPath);
+    const winnersRef = database.ref(db, firebaseSettings.winnersPath);
 
     firebaseState = {
       activeQuestionRef,
       getQuestionTypeRef: (questionId) => database.ref(db, `${firebaseSettings.questionsPath}/${questionId}/type`),
+      getWinnerRef: (questionId) => database.ref(db, `${firebaseSettings.winnersPath}/${questionId}`),
       onValue: database.onValue,
       serverTimestamp: database.serverTimestamp,
       set: database.set
@@ -535,6 +950,17 @@ async function initFirebase() {
         activeAnswerListEl.replaceChildren(createEmptyMessage(`Firebase-fejl: ${error.message}`));
       }
     );
+
+    firebaseState.onValue(
+      winnersRef,
+      (snapshot) => {
+        winnersCache = normalizeWinners(snapshot.val() || {});
+        renderActiveQuestionPanel();
+      },
+      (error) => {
+        showWinnerStatus(`Firebase-fejl: ${error.message}`, { persistent: true });
+      }
+    );
   } catch (error) {
     activeQuestionStatusEl.textContent = `Kunne ikke starte Firebase: ${error.message}`;
   }
@@ -556,6 +982,7 @@ questionTypeControls.addEventListener("click", (event) => {
     setQuestionType(button.dataset.questionType);
   }
 });
+winnerFormEl.addEventListener("submit", saveWinner);
 window.addEventListener("load", () => {
   setupQrCode();
   initFirebase();

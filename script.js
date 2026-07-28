@@ -1,5 +1,4 @@
 const FIREBASE_SDK_VERSION = "12.16.0";
-const NUMBERED_QUESTION_COUNT = 12;
 const PARTICIPANT_COOKIE_NAME = "bryllupParticipant";
 const QUESTION_ID_PATTERN = /^q(0|[1-9]|1[0-2])$/;
 const QUESTION_TYPES = ["number", "time"];
@@ -7,15 +6,94 @@ const FALLBACK_QUESTIONS = [
   {
     id: "q0",
     order: 0,
-    text: "Hvormange gange på en dag siger Anna GRØNDAHL!",
+    category: "Testspørgsmål",
+    text: 'Hvor mange gange siger Anna "Grøndahl!" i løbet af en helt almindelig uge?',
     type: "number"
   },
-  ...Array.from({ length: NUMBERED_QUESTION_COUNT }, (_, index) => ({
-    id: `q${index + 1}`,
-    order: index + 1,
-    text: String(index + 1),
+  {
+    id: "q1",
+    order: 1,
+    category: "Samarbejdsopgave",
+    text: "Hvor lang tid tager det Kasper at lave en Old Fashioned, når Anna læser opskriften højt for ham?",
+    type: "time"
+  },
+  {
+    id: "q2",
+    order: 2,
+    category: "Spørgsmål",
+    text: "Hvilket husnummer bor Anna og Kasper i?",
     type: "number"
-  }))
+  },
+  {
+    id: "q3",
+    order: 3,
+    category: "Kasper opgave",
+    text: "Hvor mange vingummibamser kan Kasper flytte fra én skål til en anden på 30 sekunder?",
+    type: "number"
+  },
+  {
+    id: "q4",
+    order: 4,
+    category: "Anna video",
+    text: "Hvor mange Disney-karakterer kan Anna nævne på 30 sekunder?",
+    type: "number"
+  },
+  {
+    id: "q5",
+    order: 5,
+    category: "Anna opgave",
+    text: "Hvor mange Disney-citater kan Anna gætte på 30 sekunder?",
+    type: "number"
+  },
+  {
+    id: "q6",
+    order: 6,
+    category: "Kasper video",
+    text: "Hvor længe kan Kasper blive stående på et surfbræt på en kunstig bølge?",
+    type: "time"
+  },
+  {
+    id: "q7",
+    order: 7,
+    category: "Spørgsmål",
+    text: "Hvor mange dækskift er der blevet lavet hos Lykkegårdens Auto i 2026?",
+    type: "number"
+  },
+  {
+    id: "q8",
+    order: 8,
+    category: "Kasper opgave",
+    text: "Hvor lang tid tager det Kasper at binde et slips?",
+    type: "time"
+  },
+  {
+    id: "q9",
+    order: 9,
+    category: "Anna video",
+    text: "Hvor mange balloner kan Anna puste op på 30 sekunder?",
+    type: "number"
+  },
+  {
+    id: "q10",
+    order: 10,
+    category: "Anna opgave",
+    text: "Hvor lang tid tager det Anna at lægge et puslespil med 8 brikker?",
+    type: "time"
+  },
+  {
+    id: "q11",
+    order: 11,
+    category: "Kasper video",
+    text: "Hvor lang tid tager det Kasper at slå 5 søm i?",
+    type: "time"
+  },
+  {
+    id: "q12",
+    order: 12,
+    category: "Samarbejdsopgave",
+    text: "Hvor lang tid tager det Anna og Kasper at skifte betræk på en dyne og en pude?",
+    type: "time"
+  }
 ];
 
 const quizForm = document.getElementById("quiz-form");
@@ -177,11 +255,14 @@ function normalizeQuestion(id, data = {}) {
   const fallback = FALLBACK_QUESTIONS.find((question) => question.id === id);
   const text = typeof data.text === "string" && data.text.trim() ? data.text.trim() : fallback ? fallback.text : id;
   const order = typeof data.order === "number" ? data.order : fallback ? fallback.order : fallbackIndex;
+  const category =
+    typeof data.category === "string" && data.category.trim() ? data.category.trim() : fallback?.category || "";
   const type = normalizeQuestionType(typeof data.type === "string" ? data.type : fallback?.type);
 
   return {
     id,
     order,
+    category,
     text,
     type
   };
@@ -346,7 +427,7 @@ function renderQuestionField() {
   meta.className = "question-step-meta";
 
   const counter = document.createElement("span");
-  counter.textContent = `Aktivt spørgsmål ${question.order}`;
+  counter.textContent = [`Aktivt spørgsmål ${question.order}`, question.category].filter(Boolean).join(" · ");
 
   const state = document.createElement("span");
   state.textContent = savedAnswer ? "Besvaret" : getQuestionTypeLabel(question.type);
