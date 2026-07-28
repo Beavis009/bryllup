@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="da">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Deltag i bryllupsquiz</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="page answer-page">
+      <section class="hero">
+        <p class="eyebrow">Bryllupsquiz</p>
+        <h1>Skriv dit navn</h1>
+        <p>Dit navn gemmes på denne enhed med en cookie.</p>
+      </section>
+
+      <section class="panel answer-panel">
+        <form id="identity-form">
+          <label>
+            <span>Navn</span>
+            <input id="name" name="name" type="text" placeholder="Skriv dit navn" maxlength="80" required />
+          </label>
+          <button type="submit">Gem navn</button>
+          <p id="identity-status" class="status-text" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+
+    <script src="firebase-config.js"></script>
+    <script src="join.js"></script>
+  </body>
+</html>

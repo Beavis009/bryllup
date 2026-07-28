@@ -30,8 +30,8 @@ function hasFirebaseConfig(config) {
   });
 }
 
-function getAnswerUrl() {
-  const url = new URL("answer.html", window.location.href);
+function getGuestEntryUrl() {
+  const url = new URL("join.html", window.location.href);
   url.search = "";
   url.hash = "";
   return url.toString();
@@ -80,7 +80,7 @@ function showShareStatus(message) {
 }
 
 function setupQrCode() {
-  const url = getAnswerUrl();
+  const url = getGuestEntryUrl();
   qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(url)}`;
   qrImage.alt = `QR-kode til ${url}`;
 }
@@ -102,7 +102,7 @@ function renderActivationControls() {
 }
 
 function shareLink() {
-  const url = getAnswerUrl();
+  const url = getGuestEntryUrl();
 
   if (navigator.share) {
     navigator
@@ -191,7 +191,7 @@ async function initFirebase() {
 }
 
 startBtn.addEventListener("click", () => {
-  window.location.href = getAnswerUrl();
+  window.location.href = getGuestEntryUrl();
 });
 shareBtn.addEventListener("click", shareLink);
 activationGrid.addEventListener("click", (event) => {
