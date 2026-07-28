@@ -312,6 +312,29 @@ button.secondary {
   line-height: 1;
 }
 
+.saved-answer-card {
+  display: grid;
+  gap: 0.35rem;
+  background: rgba(45, 212, 191, 0.1);
+  border: 1px solid rgba(45, 212, 191, 0.34);
+  border-left: 4px solid var(--accent-2);
+  border-radius: 0.5rem;
+  padding: 0.9rem 1rem;
+}
+
+.saved-answer-card span {
+  color: var(--accent-2);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.saved-answer-card p {
+  color: var(--text);
+  margin-bottom: 0;
+  overflow-wrap: anywhere;
+}
+
 .question-dots {
   display: flex;
   flex-wrap: wrap;

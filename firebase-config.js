@@ -13,6 +13,7 @@ window.firebaseConfig = {
 window.firebaseSettings = {
   questionsPath: "questions",
   activeQuestionPath: "activeQuestion",
+  answersPath: "answers",
   participantsPath: "participants",
   submissionsPath: "submissions",
   winnersPath: "winners",

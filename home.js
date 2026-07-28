@@ -22,6 +22,7 @@ const firebaseConfig = window.firebaseConfig || {};
 const firebaseSettings = {
   questionsPath: "questions",
   activeQuestionPath: "activeQuestion",
+  answersPath: "answers",
   participantsPath: "participants",
   submissionsPath: "submissions",
   ...(window.firebaseSettings || {})
@@ -29,7 +30,8 @@ const firebaseSettings = {
 
 let questionsCache = [...FALLBACK_QUESTIONS];
 let participantsCache = [];
-let submissionsCache = [];
+let answersCache = [];
+let legacySubmissionsCache = [];
 let activeQuestionId = "q1";
 let firebaseState = null;
 
@@ -158,6 +160,49 @@ function normalizeSubmissions(data = {}) {
     .sort((a, b) => getTimeValue(b) - getTimeValue(a));
 }
 
+function normalizeAnswers(data = {}) {
+  return Object.entries(data)
+    .flatMap(([questionId, answersByParticipant]) => {
+      if (!answersByParticipant || typeof answersByParticipant !== "object") {
+        return [];
+      }
+
+      return Object.entries(answersByParticipant).map(([participantId, answer]) => {
+        const answerData = answer && typeof answer === "object" ? answer : {};
+
+        return normalizeSubmission(`${questionId}-${participantId}`, {
+          ...answerData,
+          participantId,
+          questionId
+        });
+      });
+    })
+    .filter(Boolean)
+    .sort((a, b) => getTimeValue(b) - getTimeValue(a));
+}
+
+function getDisplayAnswersForQuestion(questionId) {
+  const canonicalAnswers = answersCache.filter((answer) => answer.questionId === questionId);
+  const canonicalKeys = new Set(
+    canonicalAnswers
+      .filter((answer) => answer.participantId)
+      .map((answer) => `${answer.questionId}:${answer.participantId}`)
+  );
+  const legacyAnswers = legacySubmissionsCache.filter((answer) => {
+    if (answer.questionId !== questionId) {
+      return false;
+    }
+
+    if (!answer.participantId) {
+      return true;
+    }
+
+    return !canonicalKeys.has(`${answer.questionId}:${answer.participantId}`);
+  });
+
+  return [...canonicalAnswers, ...legacyAnswers].sort((a, b) => getTimeValue(b) - getTimeValue(a));
+}
+
 function getActiveQuestion() {
   return questionsCache.find((question) => question.id === activeQuestionId) || questionsCache[0];
 }
@@ -209,18 +254,18 @@ function renderActiveQuestionPanel() {
   }
 
   const questionIndex = questionsCache.findIndex((question) => question.id === activeQuestion.id);
-  const activeSubmissions = submissionsCache.filter((submission) => submission.questionId === activeQuestion.id);
+  const activeAnswers = getDisplayAnswersForQuestion(activeQuestion.id);
 
   activeQuestionLabelEl.textContent = `Aktivt spørgsmål ${questionIndex + 1} af ${questionsCache.length}`;
   activeQuestionTitleEl.textContent = activeQuestion.text;
-  activeAnswerCountEl.textContent = formatAnswerCount(activeSubmissions.length);
+  activeAnswerCountEl.textContent = formatAnswerCount(activeAnswers.length);
 
-  if (!activeSubmissions.length) {
+  if (!activeAnswers.length) {
     activeAnswerListEl.replaceChildren(createEmptyMessage("Ingen svar på dette spørgsmål endnu."));
     return;
   }
 
-  activeAnswerListEl.replaceChildren(...activeSubmissions.map(createAnswerRow));
+  activeAnswerListEl.replaceChildren(...activeAnswers.map(createAnswerRow));
 }
 
 function createAnswerRow(submission) {
@@ -345,6 +390,7 @@ async function initFirebase() {
     const db = database.getDatabase(app);
     const questionsRef = database.ref(db, firebaseSettings.questionsPath);
     const activeQuestionRef = database.ref(db, firebaseSettings.activeQuestionPath);
+    const answersRef = database.ref(db, firebaseSettings.answersPath);
     const participantsRef = database.ref(db, firebaseSettings.participantsPath);
     const submissionsRef = database.ref(db, firebaseSettings.submissionsPath);
 
@@ -391,9 +437,20 @@ async function initFirebase() {
     );
 
     firebaseState.onValue(
+      answersRef,
+      (snapshot) => {
+        answersCache = normalizeAnswers(snapshot.val() || {});
+        renderActiveQuestionPanel();
+      },
+      (error) => {
+        activeAnswerListEl.replaceChildren(createEmptyMessage(`Firebase-fejl: ${error.message}`));
+      }
+    );
+
+    firebaseState.onValue(
       submissionsRef,
       (snapshot) => {
-        submissionsCache = normalizeSubmissions(snapshot.val() || {});
+        legacySubmissionsCache = normalizeSubmissions(snapshot.val() || {});
         renderActiveQuestionPanel();
       },
       (error) => {

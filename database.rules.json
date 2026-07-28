@@ -43,6 +43,42 @@
         }
       }
     },
+    "answers": {
+      ".read": true,
+      "$questionId": {
+        "$participantId": {
+          ".write": "!data.exists() && newData.exists() && $questionId.matches(/^q([1-9]|1[0-2])$/)",
+          ".validate": "newData.hasChildren(['participantId', 'name', 'questionId', 'question', 'answer', 'createdAt', 'createdAtClient', 'pageUrl'])",
+          "participantId": {
+            ".validate": "newData.isString() && newData.val() == $participantId && newData.val().length > 0 && newData.val().length <= 120"
+          },
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+          },
+          "questionId": {
+            ".validate": "newData.isString() && newData.val() == $questionId && newData.val().matches(/^q([1-9]|1[0-2])$/)"
+          },
+          "question": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 250"
+          },
+          "answer": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "createdAt": {
+            ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 1000"
+          },
+          "createdAtClient": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "pageUrl": {
+            ".validate": "newData.isString() && newData.val().length <= 500"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
     "submissions": {
       ".read": true,
       "$submissionId": {
