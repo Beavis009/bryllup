@@ -160,7 +160,7 @@ function isQuestionReady() {
 
 function setQuizDisabled(disabled) {
   quizSubmitBtn.disabled = disabled;
-  questionFields.querySelectorAll("input, textarea").forEach((input) => {
+  questionFields.querySelectorAll("input, textarea, select").forEach((input) => {
     input.disabled = disabled;
   });
 }
@@ -348,6 +348,24 @@ function createNumberAnswerField(question) {
   return label;
 }
 
+function createTimeSelect({ id, name, value, field }) {
+  const select = document.createElement("select");
+  select.id = id;
+  select.name = name;
+  select.required = true;
+  select.dataset.answerField = field;
+
+  for (let optionValue = 0; optionValue <= 60; optionValue += 1) {
+    const option = document.createElement("option");
+    option.value = String(optionValue);
+    option.textContent = String(optionValue).padStart(2, "0");
+    option.selected = String(value) === String(optionValue);
+    select.append(option);
+  }
+
+  return select;
+}
+
 function createTimeAnswerFields(question) {
   const group = document.createElement("div");
   group.className = "time-answer-grid";
@@ -355,33 +373,22 @@ function createTimeAnswerFields(question) {
   const minutesLabel = document.createElement("label");
   const minutesText = document.createElement("span");
   minutesText.textContent = "Minutter";
-  const minutesInput = document.createElement("input");
-  minutesInput.id = `answer-${question.id}-minutes`;
-  minutesInput.name = `${question.id}-minutes`;
-  minutesInput.type = "number";
-  minutesInput.inputMode = "numeric";
-  minutesInput.min = "0";
-  minutesInput.step = "1";
-  minutesInput.placeholder = "0";
-  minutesInput.required = true;
-  minutesInput.value = activeAnswerDraft.type === "time" ? activeAnswerDraft.minutes : "";
-  minutesInput.dataset.answerField = "minutes";
+  const minutesInput = createTimeSelect({
+    id: `answer-${question.id}-minutes`,
+    name: `${question.id}-minutes`,
+    value: activeAnswerDraft.type === "time" ? activeAnswerDraft.minutes : "",
+    field: "minutes"
+  });
 
   const secondsLabel = document.createElement("label");
   const secondsText = document.createElement("span");
   secondsText.textContent = "Sekunder";
-  const secondsInput = document.createElement("input");
-  secondsInput.id = `answer-${question.id}-seconds`;
-  secondsInput.name = `${question.id}-seconds`;
-  secondsInput.type = "number";
-  secondsInput.inputMode = "numeric";
-  secondsInput.min = "0";
-  secondsInput.max = "59";
-  secondsInput.step = "1";
-  secondsInput.placeholder = "00";
-  secondsInput.required = true;
-  secondsInput.value = activeAnswerDraft.type === "time" ? activeAnswerDraft.seconds : "";
-  secondsInput.dataset.answerField = "seconds";
+  const secondsInput = createTimeSelect({
+    id: `answer-${question.id}-seconds`,
+    name: `${question.id}-seconds`,
+    value: activeAnswerDraft.type === "time" ? activeAnswerDraft.seconds : "",
+    field: "seconds"
+  });
 
   minutesLabel.append(minutesText, minutesInput);
   secondsLabel.append(secondsText, secondsInput);
@@ -472,7 +479,7 @@ function getPreparedAnswer() {
     const minutes = parseNonNegativeInteger(activeAnswerDraft.minutes || "0");
     const seconds = parseNonNegativeInteger(activeAnswerDraft.seconds || "0");
 
-    if (minutes === null || seconds === null || seconds > 59 || minutes + seconds === 0) {
+    if (minutes === null || seconds === null || minutes > 60 || seconds > 60 || minutes + seconds === 0) {
       return null;
     }
 
@@ -671,7 +678,7 @@ async function initFirebase() {
   }
 }
 
-questionFields.addEventListener("input", (event) => {
+function handleAnswerFieldChange(event) {
   if (!event.target.matches("[data-answer-field]")) {
     return;
   }
@@ -691,7 +698,10 @@ questionFields.addEventListener("input", (event) => {
     type: "number",
     value: getNumberAnswerInput(activeQuestionId)?.value || ""
   };
-});
+}
+
+questionFields.addEventListener("input", handleAnswerFieldChange);
+questionFields.addEventListener("change", handleAnswerFieldChange);
 
 quizForm.addEventListener("submit", async (event) => {
   event.preventDefault();
