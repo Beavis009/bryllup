@@ -12,7 +12,7 @@
       <section class="hero">
         <p class="eyebrow">Bryllupsquiz</p>
         <h1>Scan og svar</h1>
-        <p>QR-koden sender gæsterne til en separat side, hvor de kun kan svare på spørgsmålene.</p>
+        <p>QR-koden sender gæsterne til svar-siden, hvor de kun ser det aktive spørgsmål.</p>
       </section>
 
       <section id="start-screen" class="panel start-screen">
@@ -29,8 +29,19 @@
         </div>
         <p id="share-status" class="status-text"></p>
       </section>
+
+      <section class="panel control-panel">
+        <div class="board-header">
+          <div>
+            <h2>Aktivér spørgsmål</h2>
+            <p id="active-question-status" class="muted-text">Forbinder til Firebase...</p>
+          </div>
+        </div>
+        <div id="question-activation" class="activation-grid"></div>
+      </section>
     </main>
 
+    <script src="firebase-config.js"></script>
     <script src="home.js"></script>
   </body>
 </html>

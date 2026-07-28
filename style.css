@@ -129,6 +129,34 @@ h3 {
   gap: 0.75rem;
 }
 
+.control-panel {
+  margin-top: 1rem;
+}
+
+.muted-text {
+  color: var(--muted);
+  margin-bottom: 0;
+}
+
+.activation-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.activation-button {
+  min-height: 3rem;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.activation-button.active {
+  background: var(--accent);
+  color: #111827;
+  border-color: var(--accent);
+}
+
 .status-text {
   color: var(--accent);
   min-height: 1.2rem;
@@ -374,7 +402,8 @@ button.secondary {
 
 @media (max-width: 760px) {
   .summary,
-  .winner-form {
+  .winner-form,
+  .activation-grid {
     grid-template-columns: 1fr;
   }
 

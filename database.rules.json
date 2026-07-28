@@ -4,55 +4,39 @@
       ".read": true,
       ".write": false
     },
+    "activeQuestion": {
+      ".read": true,
+      ".write": "newData.exists()",
+      ".validate": "newData.hasChildren(['questionId', 'activatedAt', 'activatedAtClient'])",
+      "questionId": {
+        ".validate": "newData.isString() && newData.val().matches(/^q([1-9]|1[0-2])$/)"
+      },
+      "activatedAt": {
+        ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 1000"
+      },
+      "activatedAtClient": {
+        ".validate": "newData.isString() && newData.val().length <= 40"
+      },
+      "$other": {
+        ".validate": false
+      }
+    },
     "submissions": {
       ".read": true,
       "$submissionId": {
         ".write": "!data.exists() && newData.exists()",
-        ".validate": "newData.hasChildren(['name', 'answers', 'createdAt', 'createdAtClient', 'pageUrl'])",
+        ".validate": "newData.hasChildren(['name', 'questionId', 'question', 'answer', 'createdAt', 'createdAtClient', 'pageUrl'])",
         "name": {
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
         },
-        "answers": {
-          ".validate": "newData.hasChildren(['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9', 'q10', 'q11', 'q12'])",
-          "q1": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
-          },
-          "q2": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
-          },
-          "q3": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
-          },
-          "q4": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
-          },
-          "q5": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
-          },
-          "q6": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
-          },
-          "q7": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
-          },
-          "q8": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
-          },
-          "q9": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
-          },
-          "q10": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
-          },
-          "q11": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
-          },
-          "q12": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
-          },
-          "$other": {
-            ".validate": false
-          }
+        "questionId": {
+          ".validate": "newData.isString() && newData.val().matches(/^q([1-9]|1[0-2])$/)"
+        },
+        "question": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 250"
+        },
+        "answer": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
         },
         "createdAt": {
           ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 1000"
