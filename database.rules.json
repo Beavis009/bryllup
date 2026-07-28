@@ -2,7 +2,12 @@
   "rules": {
     "questions": {
       ".read": true,
-      ".write": false
+      "$questionId": {
+        "type": {
+          ".write": "$questionId.matches(/^q(0|[1-9]|1[0-2])$/) && newData.exists()",
+          ".validate": "newData.isString() && (newData.val() == 'number' || newData.val() == 'time')"
+        }
+      }
     },
     "activeQuestion": {
       ".read": true,
@@ -48,7 +53,7 @@
       "$questionId": {
         "$participantId": {
           ".write": "!data.exists() && newData.exists() && $questionId.matches(/^q(0|[1-9]|1[0-2])$/)",
-          ".validate": "newData.hasChildren(['participantId', 'name', 'questionId', 'question', 'answer', 'createdAt', 'createdAtClient', 'pageUrl'])",
+          ".validate": "newData.hasChildren(['participantId', 'name', 'questionId', 'question', 'answer', 'answerType', 'answerValue', 'createdAt', 'createdAtClient', 'pageUrl'])",
           "participantId": {
             ".validate": "newData.isString() && newData.val() == $participantId && newData.val().length > 0 && newData.val().length <= 120"
           },
@@ -63,6 +68,12 @@
           },
           "answer": {
             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "answerType": {
+            ".validate": "newData.isString() && (newData.val() == 'number' || newData.val() == 'time')"
+          },
+          "answerValue": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 999999"
           },
           "createdAt": {
             ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 1000"

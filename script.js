@@ -2,16 +2,19 @@ const FIREBASE_SDK_VERSION = "12.16.0";
 const NUMBERED_QUESTION_COUNT = 12;
 const PARTICIPANT_COOKIE_NAME = "bryllupParticipant";
 const QUESTION_ID_PATTERN = /^q(0|[1-9]|1[0-2])$/;
+const QUESTION_TYPES = ["number", "time"];
 const FALLBACK_QUESTIONS = [
   {
     id: "q0",
     order: 0,
-    text: "Hvormange gange på en dag siger Anna GRØNDAHL!"
+    text: "Hvormange gange på en dag siger Anna GRØNDAHL!",
+    type: "number"
   },
   ...Array.from({ length: NUMBERED_QUESTION_COUNT }, (_, index) => ({
     id: `q${index + 1}`,
     order: index + 1,
-    text: String(index + 1)
+    text: String(index + 1),
+    type: "number"
   }))
 ];
 
@@ -33,7 +36,7 @@ let questionsCache = [...FALLBACK_QUESTIONS];
 let answersData = {};
 let legacySubmissionsCache = [];
 let activeQuestionId = "q1";
-let activeAnswer = "";
+let activeAnswerDraft = createEmptyAnswerDraft("number");
 let participant = readParticipantCookie();
 let firebaseState = null;
 let hasLoadedQuestions = false;
@@ -94,12 +97,41 @@ function getActiveQuestion() {
   return questionsCache.find((question) => question.id === activeQuestionId) || questionsCache[0];
 }
 
-function getAnswerInput(questionId) {
+function getNumberAnswerInput(questionId) {
   return document.getElementById(`answer-${questionId}`);
+}
+
+function getMinuteAnswerInput(questionId) {
+  return document.getElementById(`answer-${questionId}-minutes`);
+}
+
+function getSecondAnswerInput(questionId) {
+  return document.getElementById(`answer-${questionId}-seconds`);
 }
 
 function sortQuestions(questions) {
   return [...questions].sort((a, b) => a.order - b.order);
+}
+
+function normalizeQuestionType(type) {
+  return QUESTION_TYPES.includes(type) ? type : "number";
+}
+
+function getQuestionTypeLabel(type) {
+  return normalizeQuestionType(type) === "time" ? "Tid" : "Tal";
+}
+
+function createEmptyAnswerDraft(type) {
+  return normalizeQuestionType(type) === "time"
+    ? {
+        type: "time",
+        minutes: "",
+        seconds: ""
+      }
+    : {
+        type: "number",
+        value: ""
+      };
 }
 
 function getTimeValue(item) {
@@ -128,11 +160,9 @@ function isQuestionReady() {
 
 function setQuizDisabled(disabled) {
   quizSubmitBtn.disabled = disabled;
-
-  const input = getAnswerInput(activeQuestionId);
-  if (input) {
+  questionFields.querySelectorAll("input, textarea").forEach((input) => {
     input.disabled = disabled;
-  }
+  });
 }
 
 function showAnswerStatus(message, options = {}) {
@@ -161,11 +191,13 @@ function normalizeQuestion(id, data = {}) {
   const fallback = FALLBACK_QUESTIONS.find((question) => question.id === id);
   const text = typeof data.text === "string" && data.text.trim() ? data.text.trim() : fallback ? fallback.text : id;
   const order = typeof data.order === "number" ? data.order : fallback ? fallback.order : fallbackIndex;
+  const type = normalizeQuestionType(typeof data.type === "string" ? data.type : fallback?.type);
 
   return {
     id,
     order,
-    text
+    text,
+    type
   };
 }
 
@@ -199,6 +231,8 @@ function normalizeAnswer(participantId, questionId, data = {}) {
     questionId,
     answer,
     name,
+    answerType: normalizeQuestionType(data.answerType),
+    answerValue: typeof data.answerValue === "number" ? data.answerValue : null,
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
     createdAtClient: typeof data.createdAtClient === "string" ? data.createdAtClient : ""
   };
@@ -249,9 +283,32 @@ function getSavedAnswerForActiveQuestion() {
 }
 
 function syncVisibleAnswer() {
-  const input = getAnswerInput(activeQuestionId);
+  const question = getActiveQuestion();
+  if (!question) {
+    return;
+  }
+
+  if (question.type === "time") {
+    const minutesInput = getMinuteAnswerInput(activeQuestionId);
+    const secondsInput = getSecondAnswerInput(activeQuestionId);
+
+    if (minutesInput || secondsInput) {
+      activeAnswerDraft = {
+        type: "time",
+        minutes: minutesInput ? minutesInput.value : activeAnswerDraft.minutes || "",
+        seconds: secondsInput ? secondsInput.value : activeAnswerDraft.seconds || ""
+      };
+    }
+
+    return;
+  }
+
+  const input = getNumberAnswerInput(activeQuestionId);
   if (input) {
-    activeAnswer = input.value;
+    activeAnswerDraft = {
+      type: "number",
+      value: input.value
+    };
   }
 }
 
@@ -269,6 +326,69 @@ function createSavedAnswerCard(savedAnswer) {
   return card;
 }
 
+function createNumberAnswerField(question) {
+  const label = document.createElement("label");
+  label.className = "answer-input-label";
+
+  const text = document.createElement("span");
+  text.textContent = "Tal";
+
+  const input = document.createElement("input");
+  input.id = `answer-${question.id}`;
+  input.name = question.id;
+  input.type = "text";
+  input.inputMode = "decimal";
+  input.autocomplete = "off";
+  input.placeholder = "Skriv et tal";
+  input.required = true;
+  input.value = activeAnswerDraft.type === "number" ? activeAnswerDraft.value : "";
+  input.dataset.answerField = "number";
+
+  label.append(text, input);
+  return label;
+}
+
+function createTimeAnswerFields(question) {
+  const group = document.createElement("div");
+  group.className = "time-answer-grid";
+
+  const minutesLabel = document.createElement("label");
+  const minutesText = document.createElement("span");
+  minutesText.textContent = "Minutter";
+  const minutesInput = document.createElement("input");
+  minutesInput.id = `answer-${question.id}-minutes`;
+  minutesInput.name = `${question.id}-minutes`;
+  minutesInput.type = "number";
+  minutesInput.inputMode = "numeric";
+  minutesInput.min = "0";
+  minutesInput.step = "1";
+  minutesInput.placeholder = "0";
+  minutesInput.required = true;
+  minutesInput.value = activeAnswerDraft.type === "time" ? activeAnswerDraft.minutes : "";
+  minutesInput.dataset.answerField = "minutes";
+
+  const secondsLabel = document.createElement("label");
+  const secondsText = document.createElement("span");
+  secondsText.textContent = "Sekunder";
+  const secondsInput = document.createElement("input");
+  secondsInput.id = `answer-${question.id}-seconds`;
+  secondsInput.name = `${question.id}-seconds`;
+  secondsInput.type = "number";
+  secondsInput.inputMode = "numeric";
+  secondsInput.min = "0";
+  secondsInput.max = "59";
+  secondsInput.step = "1";
+  secondsInput.placeholder = "00";
+  secondsInput.required = true;
+  secondsInput.value = activeAnswerDraft.type === "time" ? activeAnswerDraft.seconds : "";
+  secondsInput.dataset.answerField = "seconds";
+
+  minutesLabel.append(minutesText, minutesInput);
+  secondsLabel.append(secondsText, secondsInput);
+  group.append(minutesLabel, secondsLabel);
+  return group;
+}
+
 function renderQuestionField() {
   const question = getActiveQuestion();
 
@@ -279,6 +399,10 @@ function renderQuestionField() {
     questionFields.replaceChildren(empty);
     quizSubmitBtn.hidden = true;
     return;
+  }
+
+  if (activeAnswerDraft.type !== question.type) {
+    activeAnswerDraft = createEmptyAnswerDraft(question.type);
   }
 
   const savedAnswer = getSavedAnswerForActiveQuestion();
@@ -292,7 +416,7 @@ function renderQuestionField() {
   counter.textContent = `Aktivt spørgsmål ${question.order}`;
 
   const state = document.createElement("span");
-  state.textContent = savedAnswer ? "Besvaret" : "Live";
+  state.textContent = savedAnswer ? "Besvaret" : getQuestionTypeLabel(question.type);
 
   meta.append(counter, state);
 
@@ -309,16 +433,7 @@ function renderQuestionField() {
     return;
   }
 
-  const textarea = document.createElement("textarea");
-  textarea.id = `answer-${question.id}`;
-  textarea.name = question.id;
-  textarea.placeholder = "Skriv dit svar";
-  textarea.maxLength = 500;
-  textarea.required = true;
-  textarea.rows = 4;
-  textarea.value = activeAnswer;
-
-  wrapper.append(textarea);
+  wrapper.append(question.type === "time" ? createTimeAnswerFields(question) : createNumberAnswerField(question));
   questionFields.replaceChildren(wrapper);
   quizSubmitBtn.hidden = false;
   setQuizDisabled(!isQuestionReady());
@@ -331,7 +446,62 @@ function getAnswerPageUrl() {
   return url.toString();
 }
 
-function buildAnswerPayload(answer) {
+function parseNonNegativeInteger(value) {
+  const trimmedValue = String(value).trim();
+  if (!/^\d+$/.test(trimmedValue)) {
+    return null;
+  }
+
+  return Number.parseInt(trimmedValue, 10);
+}
+
+function formatTimeAnswer(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function getPreparedAnswer() {
+  const question = getActiveQuestion();
+
+  if (!question) {
+    return null;
+  }
+
+  if (question.type === "time") {
+    const minutes = parseNonNegativeInteger(activeAnswerDraft.minutes || "0");
+    const seconds = parseNonNegativeInteger(activeAnswerDraft.seconds || "0");
+
+    if (minutes === null || seconds === null || seconds > 59 || minutes + seconds === 0) {
+      return null;
+    }
+
+    const totalSeconds = minutes * 60 + seconds;
+
+    return {
+      answer: formatTimeAnswer(totalSeconds),
+      answerType: "time",
+      answerValue: totalSeconds
+    };
+  }
+
+  const normalizedValue = String(activeAnswerDraft.value || "")
+    .trim()
+    .replace(",", ".");
+  const numberValue = Number(normalizedValue);
+
+  if (!normalizedValue || !Number.isFinite(numberValue) || numberValue < 0) {
+    return null;
+  }
+
+  return {
+    answer: String(activeAnswerDraft.value).trim(),
+    answerType: "number",
+    answerValue: numberValue
+  };
+}
+
+function buildAnswerPayload(preparedAnswer) {
   const question = getActiveQuestion();
 
   return {
@@ -339,17 +509,19 @@ function buildAnswerPayload(answer) {
     name: participant.name,
     questionId: question.id,
     question: question.text,
-    answer,
+    answer: preparedAnswer.answer,
+    answerType: preparedAnswer.answerType,
+    answerValue: preparedAnswer.answerValue,
     createdAt: firebaseState.serverTimestamp(),
     createdAtClient: new Date().toISOString(),
     pageUrl: getAnswerPageUrl()
   };
 }
 
-async function saveAnswer(answer) {
+async function saveAnswer(preparedAnswer) {
   const question = getActiveQuestion();
   const answerRef = firebaseState.getAnswerRef(question.id, participant.id);
-  const payload = buildAnswerPayload(answer);
+  const payload = buildAnswerPayload(preparedAnswer);
 
   const result = await firebaseState.runTransaction(
     answerRef,
@@ -450,12 +622,14 @@ async function initFirebase() {
       (snapshot) => {
         syncVisibleAnswer();
         const nextActiveQuestionId = normalizeActiveQuestion(snapshot.val() || {});
-
-        if (nextActiveQuestionId !== activeQuestionId) {
-          activeAnswer = "";
-        }
+        const didChangeQuestion = nextActiveQuestionId !== activeQuestionId;
 
         activeQuestionId = nextActiveQuestionId;
+        if (didChangeQuestion) {
+          const activeQuestion = getActiveQuestion();
+          activeAnswerDraft = createEmptyAnswerDraft(activeQuestion?.type);
+        }
+
         hasLoadedActiveQuestion = true;
         updateReadyState();
       },
@@ -498,25 +672,42 @@ async function initFirebase() {
 }
 
 questionFields.addEventListener("input", (event) => {
-  if (event.target.id === `answer-${activeQuestionId}`) {
-    activeAnswer = event.target.value;
+  if (!event.target.matches("[data-answer-field]")) {
+    return;
   }
+
+  const question = getActiveQuestion();
+
+  if (question.type === "time") {
+    activeAnswerDraft = {
+      type: "time",
+      minutes: getMinuteAnswerInput(activeQuestionId)?.value || "",
+      seconds: getSecondAnswerInput(activeQuestionId)?.value || ""
+    };
+    return;
+  }
+
+  activeAnswerDraft = {
+    type: "number",
+    value: getNumberAnswerInput(activeQuestionId)?.value || ""
+  };
 });
 
 quizForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   syncVisibleAnswer();
-  const answer = activeAnswer.trim();
+  const preparedAnswer = getPreparedAnswer();
 
   if (getSavedAnswerForActiveQuestion()) {
-    activeAnswer = "";
+    activeAnswerDraft = createEmptyAnswerDraft(getActiveQuestion()?.type);
     renderQuestionField();
     showAnswerStatus("Du har allerede svaret på dette spørgsmål.", { persistent: true });
     return;
   }
 
-  if (!firebaseState || !participant || !answer) {
-    showAnswerStatus("Skriv et svar.");
+  if (!firebaseState || !participant || !preparedAnswer) {
+    const activeQuestion = getActiveQuestion();
+    showAnswerStatus(activeQuestion?.type === "time" ? "Skriv minutter og sekunder." : "Skriv et tal.");
     return;
   }
 
@@ -524,16 +715,16 @@ quizForm.addEventListener("submit", async (event) => {
   showAnswerStatus("Gemmer...");
 
   try {
-    const didSave = await saveAnswer(answer);
+    const didSave = await saveAnswer(preparedAnswer);
 
     if (!didSave) {
-      activeAnswer = "";
+      activeAnswerDraft = createEmptyAnswerDraft(getActiveQuestion()?.type);
       renderQuestionField();
       showAnswerStatus("Du har allerede svaret på dette spørgsmål.", { persistent: true });
       return;
     }
 
-    activeAnswer = "";
+    activeAnswerDraft = createEmptyAnswerDraft(getActiveQuestion()?.type);
     renderQuestionField();
     showAnswerStatus("Svar gemt. Du kan nu se dit svar.", { persistent: true });
   } catch (error) {

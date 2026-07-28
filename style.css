@@ -203,6 +203,10 @@ h3 {
 }
 
 .activation-button {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0.15rem;
   min-height: 3rem;
   background: transparent;
   color: var(--text);
@@ -220,6 +224,60 @@ h3 {
   background: var(--accent);
   color: #111827;
   border-color: var(--accent);
+}
+
+.activation-number {
+  font-size: 1.05rem;
+}
+
+.activation-type {
+  color: var(--muted);
+  font-size: 0.65rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.activation-button.active .activation-type {
+  color: rgba(17, 24, 39, 0.72);
+}
+
+.activation-button.type-time {
+  border-color: rgba(45, 212, 191, 0.42);
+}
+
+.question-type-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.question-type-toolbar > span {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.segmented-control {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(5rem, 1fr));
+  gap: 0.35rem;
+  background: rgba(36, 40, 55, 0.72);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.3rem;
+}
+
+.segmented-control button {
+  background: transparent;
+  color: var(--muted);
+  padding: 0.55rem 0.75rem;
+}
+
+.segmented-control button.active {
+  background: var(--accent);
+  color: #111827;
 }
 
 .status-text {
@@ -261,6 +319,17 @@ select {
 textarea {
   min-height: 4.7rem;
   resize: vertical;
+}
+
+.answer-input-label,
+.time-answer-grid label {
+  font-weight: 700;
+}
+
+.time-answer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
 button {
@@ -577,6 +646,15 @@ button.secondary {
 
   .question-rail {
     grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .question-type-toolbar,
+  .time-answer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .question-type-toolbar {
+    display: grid;
   }
 
   .start-actions {

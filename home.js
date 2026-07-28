@@ -1,16 +1,19 @@
 const FIREBASE_SDK_VERSION = "12.16.0";
 const NUMBERED_QUESTION_COUNT = 12;
 const QUESTION_ID_PATTERN = /^q(0|[1-9]|1[0-2])$/;
+const QUESTION_TYPES = ["number", "time"];
 const FALLBACK_QUESTIONS = [
   {
     id: "q0",
     order: 0,
-    text: "Hvormange gange på en dag siger Anna GRØNDAHL!"
+    text: "Hvormange gange på en dag siger Anna GRØNDAHL!",
+    type: "number"
   },
   ...Array.from({ length: NUMBERED_QUESTION_COUNT }, (_, index) => ({
     id: `q${index + 1}`,
     order: index + 1,
-    text: String(index + 1)
+    text: String(index + 1),
+    type: "number"
   }))
 ];
 
@@ -19,6 +22,8 @@ const startBtn = document.getElementById("start-quiz");
 const shareBtn = document.getElementById("share-link");
 const statusEl = document.getElementById("share-status");
 const activationGrid = document.getElementById("question-activation");
+const questionTypeControls = document.getElementById("question-type-controls");
+const questionTypeStatusEl = document.getElementById("question-type-status");
 const activeQuestionStatusEl = document.getElementById("active-question-status");
 const activeQuestionLabelEl = document.getElementById("active-question-label");
 const activeQuestionTitleEl = document.getElementById("active-question-title");
@@ -86,6 +91,14 @@ function formatAnswerCount(count) {
   return count === 1 ? "1 svar" : `${count} svar`;
 }
 
+function normalizeQuestionType(type) {
+  return QUESTION_TYPES.includes(type) ? type : "number";
+}
+
+function getQuestionTypeLabel(type) {
+  return normalizeQuestionType(type) === "time" ? "Tid" : "Tal";
+}
+
 function sortQuestions(questions) {
   return [...questions].sort((a, b) => a.order - b.order);
 }
@@ -95,11 +108,13 @@ function normalizeQuestion(id, data = {}) {
   const fallback = FALLBACK_QUESTIONS.find((question) => question.id === id);
   const text = typeof data.text === "string" && data.text.trim() ? data.text.trim() : fallback ? fallback.text : id;
   const order = typeof data.order === "number" ? data.order : fallback ? fallback.order : fallbackIndex;
+  const type = normalizeQuestionType(typeof data.type === "string" ? data.type : fallback?.type);
 
   return {
     id,
     order,
-    text
+    text,
+    type
   };
 }
 
@@ -155,6 +170,8 @@ function normalizeSubmission(id, data = {}) {
     questionId,
     answer,
     name,
+    answerType: normalizeQuestionType(data.answerType),
+    answerValue: typeof data.answerValue === "number" ? data.answerValue : null,
     participantId: typeof data.participantId === "string" ? data.participantId : "",
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
     createdAtClient: typeof data.createdAtClient === "string" ? data.createdAtClient : ""
@@ -224,10 +241,29 @@ function showShareStatus(message) {
   }, 2500);
 }
 
+function showQuestionTypeStatus(message) {
+  questionTypeStatusEl.textContent = message;
+  window.setTimeout(() => {
+    if (questionTypeStatusEl.textContent === message) {
+      questionTypeStatusEl.textContent = "";
+    }
+  }, 2500);
+}
+
 function setupQrCode() {
   const url = getGuestEntryUrl();
   qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(url)}`;
   qrImage.alt = `QR-kode til ${url}`;
+}
+
+function renderQuestionTypeControls() {
+  const activeQuestion = getActiveQuestion();
+
+  questionTypeControls.querySelectorAll("[data-question-type]").forEach((button) => {
+    const type = normalizeQuestionType(button.dataset.questionType);
+    button.classList.toggle("active", Boolean(activeQuestion && activeQuestion.type === type));
+    button.disabled = !firebaseState || !activeQuestion;
+  });
 }
 
 function renderActivationControls() {
@@ -235,10 +271,20 @@ function renderActivationControls() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = question.id === activeQuestionId ? "activation-button active" : "activation-button";
+    button.classList.add(`type-${question.type}`);
     button.dataset.questionId = question.id;
-    button.textContent = question.order;
-    button.title = question.text;
+    button.title = `${question.text} (${getQuestionTypeLabel(question.type)})`;
     button.disabled = !firebaseState;
+
+    const number = document.createElement("span");
+    number.className = "activation-number";
+    number.textContent = question.order;
+
+    const type = document.createElement("span");
+    type.className = "activation-type";
+    type.textContent = getQuestionTypeLabel(question.type);
+
+    button.append(number, type);
     return button;
   });
 
@@ -247,6 +293,7 @@ function renderActivationControls() {
   activeQuestionStatusEl.textContent = activeQuestion
     ? `Aktivt spørgsmål ${activeQuestion.order}`
     : "Intet aktivt spørgsmål";
+  renderQuestionTypeControls();
 }
 
 function renderActiveQuestionPanel() {
@@ -262,7 +309,7 @@ function renderActiveQuestionPanel() {
 
   const activeAnswers = getDisplayAnswersForQuestion(activeQuestion.id);
 
-  activeQuestionLabelEl.textContent = `Aktivt spørgsmål ${activeQuestion.order}`;
+  activeQuestionLabelEl.textContent = `Aktivt spørgsmål ${activeQuestion.order} · ${getQuestionTypeLabel(activeQuestion.type)}`;
   activeQuestionTitleEl.textContent = activeQuestion.text;
   activeAnswerCountEl.textContent = formatAnswerCount(activeAnswers.length);
 
@@ -377,10 +424,34 @@ async function activateQuestion(questionId) {
   }
 }
 
+async function setQuestionType(type) {
+  const normalizedType = normalizeQuestionType(type);
+  const activeQuestion = getActiveQuestion();
+
+  if (!firebaseState || !activeQuestion || activeQuestion.type === normalizedType) {
+    return;
+  }
+
+  questionTypeControls.querySelectorAll("[data-question-type]").forEach((button) => {
+    button.disabled = true;
+  });
+  showQuestionTypeStatus("Gemmer type...");
+
+  try {
+    const { getQuestionTypeRef, set } = firebaseState;
+    await set(getQuestionTypeRef(activeQuestion.id), normalizedType);
+    showQuestionTypeStatus(`Type sat til ${getQuestionTypeLabel(normalizedType)}`);
+  } catch (error) {
+    showQuestionTypeStatus(`Kunne ikke gemme type: ${error.message}`);
+    renderQuestionTypeControls();
+  }
+}
+
 async function initFirebase() {
   renderActivationControls();
   renderActiveQuestionPanel();
   renderParticipants();
+  renderQuestionTypeControls();
 
   if (!hasFirebaseConfig(firebaseConfig)) {
     activeQuestionStatusEl.textContent = "Indsæt Firebase config i firebase-config.js.";
@@ -402,6 +473,7 @@ async function initFirebase() {
 
     firebaseState = {
       activeQuestionRef,
+      getQuestionTypeRef: (questionId) => database.ref(db, `${firebaseSettings.questionsPath}/${questionId}/type`),
       onValue: database.onValue,
       serverTimestamp: database.serverTimestamp,
       set: database.set
@@ -476,6 +548,12 @@ activationGrid.addEventListener("click", (event) => {
   const button = event.target.closest("[data-question-id]");
   if (button) {
     activateQuestion(button.dataset.questionId);
+  }
+});
+questionTypeControls.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-question-type]");
+  if (button) {
+    setQuestionType(button.dataset.questionType);
   }
 });
 window.addEventListener("load", () => {
