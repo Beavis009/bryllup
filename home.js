@@ -96,6 +96,7 @@ const FALLBACK_QUESTIONS = [
 ];
 
 const qrImage = document.getElementById("qr-code");
+const qrOpenBtn = document.getElementById("qr-open");
 const startBtn = document.getElementById("start-quiz");
 const shareBtn = document.getElementById("share-link");
 const statusEl = document.getElementById("share-status");
@@ -118,6 +119,9 @@ const videoModalLabelEl = document.getElementById("video-modal-label");
 const videoModalTitleEl = document.getElementById("video-modal-title");
 const videoModalBodyEl = document.getElementById("video-modal-body");
 const videoModalCloseBtn = document.getElementById("video-modal-close");
+const qrModalEl = document.getElementById("qr-modal");
+const qrModalImageEl = document.getElementById("qr-modal-code");
+const qrModalCloseBtn = document.getElementById("qr-modal-close");
 const participantCountEl = document.getElementById("participant-count");
 const participantsListEl = document.getElementById("participants-list");
 const firebaseConfig = window.firebaseConfig || {};
@@ -578,8 +582,11 @@ function formatDistance(questionType, distance) {
 
 function setupQrCode() {
   const url = getGuestEntryUrl();
-  qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(url)}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=720x720&data=${encodeURIComponent(url)}`;
+  qrImage.src = qrUrl;
   qrImage.alt = `QR-kode til ${url}`;
+  qrModalImageEl.src = qrUrl;
+  qrModalImageEl.alt = `Stor QR-kode til ${url}`;
 }
 
 function renderQuestionTypeControls() {
@@ -802,6 +809,8 @@ function openQuestionVideo(questionId) {
     return;
   }
 
+  closeQrModal();
+
   const video = createQuestionVideoElement(videoState);
   openVideoQuestionId = questionId;
   videoModalLabelEl.textContent = [`Spørgsmål ${question.order}`, question.category].filter(Boolean).join(" · ");
@@ -828,6 +837,19 @@ function closeVideoModal() {
   openVideoQuestionId = "";
   videoModalBodyEl.replaceChildren();
   videoModalEl.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+function openQrModal() {
+  closeVideoModal();
+  qrModalImageEl.src = qrImage.src;
+  qrModalImageEl.alt = qrImage.alt.replace("QR-kode", "Stor QR-kode");
+  qrModalEl.hidden = false;
+  document.body.classList.add("modal-open");
+}
+
+function closeQrModal() {
+  qrModalEl.hidden = true;
   document.body.classList.remove("modal-open");
 }
 
@@ -1138,6 +1160,7 @@ async function initFirebase() {
 startBtn.addEventListener("click", () => {
   window.location.href = getGuestEntryUrl();
 });
+qrOpenBtn.addEventListener("click", openQrModal);
 shareBtn.addEventListener("click", shareLink);
 activationGrid.addEventListener("click", (event) => {
   const videoButton = event.target.closest("[data-video-question-id]");
@@ -1164,9 +1187,23 @@ videoModalEl.addEventListener("click", (event) => {
     closeVideoModal();
   }
 });
+qrModalCloseBtn.addEventListener("click", closeQrModal);
+qrModalEl.addEventListener("click", (event) => {
+  if (event.target.closest("[data-qr-close]")) {
+    closeQrModal();
+  }
+});
 window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !videoModalEl.hidden) {
+  if (event.key !== "Escape") {
+    return;
+  }
+
+  if (!videoModalEl.hidden) {
     closeVideoModal();
+  }
+
+  if (!qrModalEl.hidden) {
+    closeQrModal();
   }
 });
 window.addEventListener("load", () => {

@@ -75,9 +75,9 @@
               <strong>Til gæsterne</strong>
               <p>Scan QR-koden med telefonen.</p>
             </div>
-            <div class="qr-box large">
+            <button id="qr-open" type="button" class="qr-box large qr-button" aria-label="Forstør QR-kode">
               <img id="qr-code" alt="QR-kode til svar-siden" />
-            </div>
+            </button>
             <div class="start-actions">
               <button id="start-quiz" type="button">Gå til svar</button>
               <button id="share-link" type="button" class="secondary">Del link</button>
@@ -112,6 +112,22 @@
           <button id="video-modal-close" type="button" class="secondary compact-action">Luk</button>
         </div>
         <div id="video-modal-body" class="video-modal-body"></div>
+      </section>
+    </div>
+
+    <div id="qr-modal" class="video-modal qr-modal" hidden>
+      <div class="video-modal-backdrop" data-qr-close></div>
+      <section class="video-dialog qr-dialog" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title">
+        <div class="video-dialog-header">
+          <div>
+            <span class="question-number">QR-kode</span>
+            <h2 id="qr-modal-title">Scan for at svare</h2>
+          </div>
+          <button id="qr-modal-close" type="button" class="secondary compact-action">Luk</button>
+        </div>
+        <div class="qr-modal-body">
+          <img id="qr-modal-code" alt="Stor QR-kode til svar-siden" />
+        </div>
       </section>
     </div>
 

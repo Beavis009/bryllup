@@ -411,6 +411,24 @@ h3 {
   background: #050608;
 }
 
+.qr-dialog {
+  width: min(100%, 640px);
+}
+
+.qr-modal-body {
+  display: grid;
+  place-items: center;
+  background: white;
+  border-radius: 0.5rem;
+  padding: min(5vw, 2rem);
+}
+
+.qr-modal-body img {
+  width: min(100%, 520px);
+  height: auto;
+  display: block;
+}
+
 .upload-panel {
   display: grid;
   gap: 0.9rem;
@@ -548,6 +566,18 @@ button.secondary,
   background: transparent;
   color: var(--text);
   border: 1px solid var(--border);
+}
+
+.qr-button {
+  background: white;
+  color: #111827;
+  border: 0;
+  cursor: zoom-in;
+}
+
+.qr-button:focus-visible {
+  outline: 3px solid var(--accent-2);
+  outline-offset: 4px;
 }
 
 .question-step {
