@@ -1,0 +1,29 @@
+{
+  "rules": {
+    "guesses": {
+      ".read": true,
+      "$guessId": {
+        ".write": "!data.exists() && newData.exists()",
+        ".validate": "newData.hasChildren(['name', 'time', 'createdAt', 'createdAtClient', 'pageUrl'])",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+        },
+        "time": {
+          ".validate": "newData.isString() && newData.val().matches(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 1000"
+        },
+        "createdAtClient": {
+          ".validate": "newData.isString() && newData.val().length <= 40"
+        },
+        "pageUrl": {
+          ".validate": "newData.isString() && newData.val().length <= 500"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}

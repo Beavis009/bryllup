@@ -31,7 +31,7 @@
         <form id="guess-form">
           <label>
             <span>Navn</span>
-            <input id="name" name="name" type="text" placeholder="Skriv dit navn" required />
+            <input id="name" name="name" type="text" placeholder="Skriv dit navn" maxlength="80" required />
           </label>
 
           <label>
@@ -40,6 +40,7 @@
           </label>
 
           <button type="submit">Gem gæt</button>
+          <p id="save-status" class="status-text" role="status" aria-live="polite"></p>
         </form>
 
         <div class="summary">
@@ -61,12 +62,13 @@
       <section class="board">
         <div class="board-header">
           <h2>Gættede tider</h2>
-          <button id="clear-btn" type="button" class="secondary">Ryd alt</button>
+          <button id="clear-btn" type="button" class="secondary" hidden>Ryd alt</button>
         </div>
         <div id="guess-list" class="guess-list"></div>
       </section>
     </main>
 
+    <script src="firebase-config.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
