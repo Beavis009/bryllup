@@ -113,11 +113,11 @@ const winnerTargetLabelEl = document.getElementById("winner-target-label");
 const winnerTargetInputEl = document.getElementById("winner-target");
 const winnerSaveBtn = document.getElementById("winner-save");
 const winnerStatusEl = document.getElementById("winner-status");
-const frontVideoStateEl = document.getElementById("front-video-state");
-const frontVideoDisplayEl = document.getElementById("front-video-display");
-const frontVideoShowBtn = document.getElementById("front-video-show");
-const frontVideoHideBtn = document.getElementById("front-video-hide");
-const frontVideoStatusEl = document.getElementById("front-video-status");
+const videoModalEl = document.getElementById("video-modal");
+const videoModalLabelEl = document.getElementById("video-modal-label");
+const videoModalTitleEl = document.getElementById("video-modal-title");
+const videoModalBodyEl = document.getElementById("video-modal-body");
+const videoModalCloseBtn = document.getElementById("video-modal-close");
 const participantCountEl = document.getElementById("participant-count");
 const participantsListEl = document.getElementById("participants-list");
 const firebaseConfig = window.firebaseConfig || {};
@@ -141,7 +141,7 @@ let questionVideosCache = {};
 let activeQuestionId = "q1";
 let firebaseState = null;
 let winnerStatusTimer;
-let frontVideoStatusTimer;
+let openVideoQuestionId = "";
 
 function hasFirebaseConfig(config) {
   return ["apiKey", "authDomain", "databaseURL", "projectId", "appId"].every((key) => {
@@ -417,6 +417,11 @@ function normalizeQuestionVideos(data = {}) {
   );
 }
 
+function getPlayableQuestionVideo(questionId) {
+  const video = questionVideosCache[questionId];
+  return video?.visible === true ? video : null;
+}
+
 function getDisplayAnswersForQuestion(questionId) {
   const canonicalAnswers = answersCache.filter((answer) => answer.questionId === questionId);
   const canonicalKeys = new Set(
@@ -524,22 +529,6 @@ function showWinnerStatus(message, options = {}) {
   }, 3500);
 }
 
-function showFrontVideoStatus(message, options = {}) {
-  frontVideoStatusEl.textContent = message;
-
-  if (options.persistent) {
-    window.clearTimeout(frontVideoStatusTimer);
-    return;
-  }
-
-  window.clearTimeout(frontVideoStatusTimer);
-  frontVideoStatusTimer = window.setTimeout(() => {
-    if (frontVideoStatusEl.textContent === message) {
-      frontVideoStatusEl.textContent = "";
-    }
-  }, 3500);
-}
-
 function parseCorrectAnswerValue(rawValue, type) {
   const normalizedType = normalizeQuestionType(type);
   const normalizedValue = String(rawValue || "")
@@ -604,7 +593,10 @@ function renderQuestionTypeControls() {
 }
 
 function renderActivationControls() {
-  const buttons = questionsCache.map((question) => {
+  const controls = questionsCache.map((question) => {
+    const cell = document.createElement("div");
+    cell.className = question.id === activeQuestionId ? "activation-cell active" : "activation-cell";
+
     const button = document.createElement("button");
     button.type = "button";
     button.className = question.id === activeQuestionId ? "activation-button active" : "activation-button";
@@ -618,10 +610,22 @@ function renderActivationControls() {
     number.textContent = question.order;
 
     button.append(number);
-    return button;
+    cell.append(button);
+
+    if (getPlayableQuestionVideo(question.id)) {
+      const videoButton = document.createElement("button");
+      videoButton.type = "button";
+      videoButton.className = "question-video-button";
+      videoButton.dataset.videoQuestionId = question.id;
+      videoButton.title = `Afspil video til spørgsmål ${question.order}`;
+      videoButton.setAttribute("aria-label", `Afspil video til spørgsmål ${question.order}`);
+      cell.append(videoButton);
+    }
+
+    return cell;
   });
 
-  activationGrid.replaceChildren(...buttons);
+  activationGrid.replaceChildren(...controls);
   const activeQuestion = getActiveQuestion();
   activeQuestionStatusEl.textContent = activeQuestion
     ? `Aktivt spørgsmål ${activeQuestion.order}`
@@ -780,46 +784,61 @@ function createWinnerBlock(winner, question) {
   return block;
 }
 
-function createFrontVideoElement(videoState) {
+function createQuestionVideoElement(videoState) {
   const video = document.createElement("video");
   video.src = videoState.embedUrl;
   video.controls = true;
   video.playsInline = true;
   video.preload = "metadata";
+  video.autoplay = true;
   return video;
 }
 
-function renderFrontVideo() {
-  const activeQuestion = getActiveQuestion();
-  const activeVideo = activeQuestion ? questionVideosCache[activeQuestion.id] : null;
-  const hasSavedVideo = Boolean(activeVideo?.url && activeVideo?.embedUrl);
-  const shouldShowVideo = Boolean(hasSavedVideo && activeVideo.visible);
+function openQuestionVideo(questionId) {
+  const question = questionsCache.find((item) => item.id === questionId);
+  const videoState = getPlayableQuestionVideo(questionId);
 
-  if (!activeQuestion) {
-    frontVideoStateEl.textContent = "Skjult";
-    frontVideoShowBtn.disabled = true;
-    frontVideoHideBtn.disabled = true;
-    frontVideoDisplayEl.classList.remove("has-video");
-    frontVideoDisplayEl.replaceChildren(createEmptyMessage("Intet aktivt spørgsmål."));
+  if (!question || !videoState) {
     return;
   }
 
-  frontVideoStateEl.textContent = shouldShowVideo ? `Vises på ${activeQuestion.order}` : `Skjult på ${activeQuestion.order}`;
-  frontVideoShowBtn.disabled = !firebaseState || !hasSavedVideo || shouldShowVideo;
-  frontVideoHideBtn.disabled = !firebaseState || !activeQuestion || !hasSavedVideo || !activeVideo.visible;
-  frontVideoDisplayEl.classList.toggle("has-video", shouldShowVideo);
+  const video = createQuestionVideoElement(videoState);
+  openVideoQuestionId = questionId;
+  videoModalLabelEl.textContent = [`Spørgsmål ${question.order}`, question.category].filter(Boolean).join(" · ");
+  videoModalTitleEl.textContent = question.text;
+  videoModalBodyEl.replaceChildren(video);
+  videoModalEl.hidden = false;
+  document.body.classList.add("modal-open");
 
-  if (!hasSavedVideo) {
-    frontVideoDisplayEl.replaceChildren(createEmptyMessage(`Ingen video gemt til spørgsmål ${activeQuestion.order}.`));
+  video.currentTime = 0;
+  const playPromise = video.play();
+  if (playPromise) {
+    playPromise.catch(() => {});
+  }
+}
+
+function closeVideoModal() {
+  const video = videoModalBodyEl.querySelector("video");
+  if (video) {
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+  }
+
+  openVideoQuestionId = "";
+  videoModalBodyEl.replaceChildren();
+  videoModalEl.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+function syncOpenVideoModal() {
+  if (!openVideoQuestionId) {
     return;
   }
 
-  if (!shouldShowVideo) {
-    frontVideoDisplayEl.replaceChildren(createEmptyMessage(`Video skjult på spørgsmål ${activeQuestion.order}.`));
-    return;
+  if (!getPlayableQuestionVideo(openVideoQuestionId)) {
+    closeVideoModal();
   }
-
-  frontVideoDisplayEl.replaceChildren(createFrontVideoElement(activeVideo));
 }
 
 function renderParticipants() {
@@ -997,49 +1016,11 @@ async function saveWinner(event) {
   }
 }
 
-function buildQuestionVideoPayload(question, parsedVideo, visible) {
-  return {
-    questionId: question.id,
-    question: question.text,
-    questionCategory: question.category || "",
-    ...parsedVideo,
-    visible,
-    updatedAt: firebaseState.serverTimestamp(),
-    updatedAtClient: new Date().toISOString()
-  };
-}
-
-async function setFrontVideoVisibility(visible) {
-  const activeQuestion = getActiveQuestion();
-  const activeVideo = activeQuestion ? questionVideosCache[activeQuestion.id] : null;
-
-  if (!firebaseState || !activeQuestion || !activeVideo) {
-    return;
-  }
-
-  frontVideoShowBtn.disabled = true;
-  frontVideoHideBtn.disabled = true;
-  showFrontVideoStatus(visible ? "Viser video..." : "Skjuler video...");
-
-  try {
-    const { getQuestionVideoRef, set } = firebaseState;
-    await set(getQuestionVideoRef(activeQuestion.id), buildQuestionVideoPayload(activeQuestion, activeVideo, visible));
-    showFrontVideoStatus(
-      visible ? `Video vises på spørgsmål ${activeQuestion.order}.` : `Video skjult på spørgsmål ${activeQuestion.order}.`
-    );
-  } catch (error) {
-    showFrontVideoStatus(`Kunne ikke gemme video: ${error.message}`, { persistent: true });
-  } finally {
-    renderFrontVideo();
-  }
-}
-
 async function initFirebase() {
   renderActivationControls();
   renderActiveQuestionPanel();
   renderParticipants();
   renderQuestionTypeControls();
-  renderFrontVideo();
 
   if (!hasFirebaseConfig(firebaseConfig)) {
     activeQuestionStatusEl.textContent = "Indsæt Firebase config i firebase-config.js.";
@@ -1065,7 +1046,6 @@ async function initFirebase() {
       activeQuestionRef,
       getQuestionTypeRef: (questionId) => database.ref(db, `${firebaseSettings.questionsPath}/${questionId}/type`),
       getWinnerRef: (questionId) => database.ref(db, `${firebaseSettings.winnersPath}/${questionId}`),
-      getQuestionVideoRef: (questionId) => database.ref(db, `${firebaseSettings.questionVideosPath}/${questionId}`),
       onValue: database.onValue,
       serverTimestamp: database.serverTimestamp,
       set: database.set
@@ -1077,7 +1057,6 @@ async function initFirebase() {
         questionsCache = normalizeQuestions(snapshot.val() || {});
         renderActivationControls();
         renderActiveQuestionPanel();
-        renderFrontVideo();
       },
       (error) => {
         activeQuestionStatusEl.textContent = `Firebase-fejl: ${error.message}`;
@@ -1090,7 +1069,6 @@ async function initFirebase() {
         activeQuestionId = normalizeActiveQuestion(snapshot.val() || {});
         renderActivationControls();
         renderActiveQuestionPanel();
-        renderFrontVideo();
       },
       (error) => {
         activeQuestionStatusEl.textContent = `Firebase-fejl: ${error.message}`;
@@ -1145,10 +1123,11 @@ async function initFirebase() {
       questionVideosRef,
       (snapshot) => {
         questionVideosCache = normalizeQuestionVideos(snapshot.val() || {});
-        renderFrontVideo();
+        renderActivationControls();
+        syncOpenVideoModal();
       },
       (error) => {
-        showFrontVideoStatus(`Firebase-fejl: ${error.message}`, { persistent: true });
+        activeQuestionStatusEl.textContent = `Firebase-fejl: ${error.message}`;
       }
     );
   } catch (error) {
@@ -1161,6 +1140,12 @@ startBtn.addEventListener("click", () => {
 });
 shareBtn.addEventListener("click", shareLink);
 activationGrid.addEventListener("click", (event) => {
+  const videoButton = event.target.closest("[data-video-question-id]");
+  if (videoButton) {
+    openQuestionVideo(videoButton.dataset.videoQuestionId);
+    return;
+  }
+
   const button = event.target.closest("[data-question-id]");
   if (button) {
     activateQuestion(button.dataset.questionId);
@@ -1173,8 +1158,17 @@ questionTypeControls.addEventListener("click", (event) => {
   }
 });
 winnerFormEl.addEventListener("submit", saveWinner);
-frontVideoShowBtn.addEventListener("click", () => setFrontVideoVisibility(true));
-frontVideoHideBtn.addEventListener("click", () => setFrontVideoVisibility(false));
+videoModalCloseBtn.addEventListener("click", closeVideoModal);
+videoModalEl.addEventListener("click", (event) => {
+  if (event.target.closest("[data-video-close]")) {
+    closeVideoModal();
+  }
+});
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !videoModalEl.hidden) {
+    closeVideoModal();
+  }
+});
 window.addEventListener("load", () => {
   setupQrCode();
   initFirebase();

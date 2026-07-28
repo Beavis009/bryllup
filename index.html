@@ -25,6 +25,7 @@
                 <h2>Spørgsmål</h2>
                 <p class="muted-text">Vælg det aktive spørgsmål</p>
               </div>
+              <a class="button-link secondary compact-action" href="upload.html">Upload video</a>
             </div>
             <div id="question-activation" class="activation-grid question-rail"></div>
             <div class="question-type-toolbar" hidden>
@@ -35,25 +36,6 @@
               </div>
             </div>
             <p id="question-type-status" class="status-text" hidden></p>
-          </section>
-
-          <section class="panel video-panel">
-            <div class="board-header">
-              <div>
-                <h2>Video til spørgsmål</h2>
-                <p class="muted-text">Gemmes på det aktive spørgsmål</p>
-              </div>
-              <span id="front-video-state" class="answer-count">Skjult</span>
-            </div>
-            <div id="front-video-display" class="front-video-display">
-              <p class="empty">Ingen video vist.</p>
-            </div>
-            <div class="front-video-actions">
-              <button id="front-video-show" type="button">Vis video</button>
-              <button id="front-video-hide" type="button" class="secondary">Skjul video</button>
-              <a class="button-link secondary" href="upload.html">Upload fil</a>
-            </div>
-            <p id="front-video-status" class="status-text"></p>
           </section>
 
           <section class="panel live-panel">
@@ -118,6 +100,20 @@
         </aside>
       </div>
     </main>
+
+    <div id="video-modal" class="video-modal" hidden>
+      <div class="video-modal-backdrop" data-video-close></div>
+      <section class="video-dialog" role="dialog" aria-modal="true" aria-labelledby="video-modal-title">
+        <div class="video-dialog-header">
+          <div>
+            <span id="video-modal-label" class="question-number">Video</span>
+            <h2 id="video-modal-title">-</h2>
+          </div>
+          <button id="video-modal-close" type="button" class="secondary compact-action">Luk</button>
+        </div>
+        <div id="video-modal-body" class="video-modal-body"></div>
+      </section>
+    </div>
 
     <script src="firebase-config.js"></script>
     <script src="home.js"></script>
