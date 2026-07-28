@@ -1,15 +1,58 @@
 {
   "rules": {
-    "guesses": {
+    "questions": {
       ".read": true,
-      "$guessId": {
+      ".write": false
+    },
+    "submissions": {
+      ".read": true,
+      "$submissionId": {
         ".write": "!data.exists() && newData.exists()",
-        ".validate": "newData.hasChildren(['name', 'time', 'createdAt', 'createdAtClient', 'pageUrl'])",
+        ".validate": "newData.hasChildren(['name', 'answers', 'createdAt', 'createdAtClient', 'pageUrl'])",
         "name": {
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
         },
-        "time": {
-          ".validate": "newData.isString() && newData.val().matches(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)"
+        "answers": {
+          ".validate": "newData.hasChildren(['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9', 'q10', 'q11', 'q12'])",
+          "q1": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "q2": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "q3": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "q4": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "q5": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "q6": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "q7": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "q8": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "q9": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "q10": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "q11": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "q12": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+          },
+          "$other": {
+            ".validate": false
+          }
         },
         "createdAt": {
           ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 1000"
@@ -19,6 +62,37 @@
         },
         "pageUrl": {
           ".validate": "newData.isString() && newData.val().length <= 500"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "winners": {
+      ".read": true,
+      "$questionId": {
+        ".write": "newData.exists() && $questionId.matches(/^q([1-9]|1[0-2])$/)",
+        ".validate": "newData.hasChildren(['questionId', 'question', 'submissionId', 'winnerName', 'answer', 'savedAt', 'savedAtClient'])",
+        "questionId": {
+          ".validate": "newData.isString() && newData.val() == $questionId"
+        },
+        "question": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 250"
+        },
+        "submissionId": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
+        },
+        "winnerName": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+        },
+        "answer": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+        },
+        "savedAt": {
+          ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 1000"
+        },
+        "savedAtClient": {
+          ".validate": "newData.isString() && newData.val().length <= 40"
         },
         "$other": {
           ".validate": false

@@ -4,15 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
     <meta name="theme-color" content="#0f172a" />
-    <title>Bryllupsstemning</title>
+    <title>Bryllupsquiz</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <main class="page">
       <section class="hero">
-        <p class="eyebrow">Bryllupsdisplay</p>
-        <h1>Hvem gætter nærmest?</h1>
-        <p>Åbn siden på telefonen, scan QR-koden og stem med ét tryk.</p>
+        <p class="eyebrow">Bryllupsquiz</p>
+        <h1>12 spørgsmål til festen</h1>
+        <p>Scan QR-koden, svar på alle spørgsmålene og følg vinderne undervejs.</p>
       </section>
 
       <section class="panel">
@@ -22,49 +22,46 @@
             <p>Scan QR-koden og deltag direkte fra telefonen.</p>
           </div>
           <div class="qr-box">
-            <img id="qr-code" alt="QR-kode til stemmesiden" />
+            <img id="qr-code" alt="QR-kode til quizsiden" />
           </div>
           <button id="share-link" type="button" class="secondary">Del link</button>
           <p id="share-status" class="status-text"></p>
         </div>
 
-        <form id="guess-form">
+        <form id="quiz-form">
           <label>
             <span>Navn</span>
             <input id="name" name="name" type="text" placeholder="Skriv dit navn" maxlength="80" required />
           </label>
 
-          <label>
-            <span>Gættet tid</span>
-            <input id="time" name="time" type="time" required />
-          </label>
+          <div id="question-fields" class="question-fields"></div>
 
-          <button type="submit">Gem gæt</button>
+          <button type="submit">Gem svar</button>
           <p id="save-status" class="status-text" role="status" aria-live="polite"></p>
         </form>
 
         <div class="summary">
           <div>
-            <strong id="count">0</strong>
-            <span>gæt</span>
+            <strong id="participant-count">0</strong>
+            <span>deltagere</span>
           </div>
           <div>
-            <strong id="earliest">-</strong>
-            <span>tidligste</span>
+            <strong id="answer-count">0</strong>
+            <span>svar</span>
           </div>
           <div>
-            <strong id="latest">-</strong>
-            <span>seneste</span>
+            <strong id="winner-count">0/12</strong>
+            <span>vindere</span>
           </div>
         </div>
       </section>
 
       <section class="board">
         <div class="board-header">
-          <h2>Gættede tider</h2>
+          <h2>Spørgsmål og vindere</h2>
           <button id="clear-btn" type="button" class="secondary" hidden>Ryd alt</button>
         </div>
-        <div id="guess-list" class="guess-list"></div>
+        <div id="question-board" class="question-board"></div>
       </section>
     </main>
 

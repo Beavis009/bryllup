@@ -11,6 +11,8 @@ window.firebaseConfig = {
 };
 
 window.firebaseSettings = {
-  path: "guesses",
+  questionsPath: "questions",
+  submissionsPath: "submissions",
+  winnersPath: "winners",
   allowClientClear: false
 };
