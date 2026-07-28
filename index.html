@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="da">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Bryllupsstemning</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">Bryllupsdisplay</p>
+        <h1>Hvem gætter nærmest?</h1>
+        <p>Åbn siden på telefonen, scan QR-koden og stem med ét tryk.</p>
+      </section>
+
+      <section class="panel">
+        <div class="mobile-cta">
+          <div>
+            <strong>Til mobil</strong>
+            <p>Scan QR-koden og deltag direkte fra telefonen.</p>
+          </div>
+          <div class="qr-box">
+            <img id="qr-code" alt="QR-kode til stemmesiden" />
+          </div>
+          <button id="share-link" type="button" class="secondary">Del link</button>
+          <p id="share-status" class="status-text"></p>
+        </div>
+
+        <form id="guess-form">
+          <label>
+            <span>Navn</span>
+            <input id="name" name="name" type="text" placeholder="Skriv dit navn" required />
+          </label>
+
+          <label>
+            <span>Gættet tid</span>
+            <input id="time" name="time" type="time" required />
+          </label>
+
+          <button type="submit">Gem gæt</button>
+        </form>
+
+        <div class="summary">
+          <div>
+            <strong id="count">0</strong>
+            <span>gæt</span>
+          </div>
+          <div>
+            <strong id="earliest">-</strong>
+            <span>tidligste</span>
+          </div>
+          <div>
+            <strong id="latest">-</strong>
+            <span>seneste</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="board">
+        <div class="board-header">
+          <h2>Gættede tider</h2>
+          <button id="clear-btn" type="button" class="secondary">Ryd alt</button>
+        </div>
+        <div id="guess-list" class="guess-list"></div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
