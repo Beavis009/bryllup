@@ -17,5 +17,6 @@ window.firebaseSettings = {
   participantsPath: "participants",
   submissionsPath: "submissions",
   winnersPath: "winners",
+  questionVideosPath: "questionVideos",
   allowClientClear: false
 };

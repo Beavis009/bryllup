@@ -1,6 +1,7 @@
 const FIREBASE_SDK_VERSION = "12.16.0";
 const QUESTION_ID_PATTERN = /^q(0|[1-9]|1[0-2])$/;
 const QUESTION_TYPES = ["number", "time"];
+const DIRECT_VIDEO_EXTENSIONS = [".mp4", ".webm", ".ogg", ".mov"];
 const FALLBACK_QUESTIONS = [
   {
     id: "q0",
@@ -113,6 +114,13 @@ const winnerTargetLabelEl = document.getElementById("winner-target-label");
 const winnerTargetInputEl = document.getElementById("winner-target");
 const winnerSaveBtn = document.getElementById("winner-save");
 const winnerStatusEl = document.getElementById("winner-status");
+const frontVideoStateEl = document.getElementById("front-video-state");
+const frontVideoDisplayEl = document.getElementById("front-video-display");
+const frontVideoFormEl = document.getElementById("front-video-form");
+const frontVideoUrlInputEl = document.getElementById("front-video-url");
+const frontVideoSaveBtn = document.getElementById("front-video-save");
+const frontVideoHideBtn = document.getElementById("front-video-hide");
+const frontVideoStatusEl = document.getElementById("front-video-status");
 const participantCountEl = document.getElementById("participant-count");
 const participantsListEl = document.getElementById("participants-list");
 const firebaseConfig = window.firebaseConfig || {};
@@ -123,6 +131,7 @@ const firebaseSettings = {
   participantsPath: "participants",
   submissionsPath: "submissions",
   winnersPath: "winners",
+  questionVideosPath: "questionVideos",
   ...(window.firebaseSettings || {})
 };
 
@@ -131,9 +140,11 @@ let participantsCache = [];
 let answersCache = [];
 let legacySubmissionsCache = [];
 let winnersCache = {};
+let questionVideosCache = {};
 let activeQuestionId = "q1";
 let firebaseState = null;
 let winnerStatusTimer;
+let frontVideoStatusTimer;
 
 function hasFirebaseConfig(config) {
   return ["apiKey", "authDomain", "databaseURL", "projectId", "appId"].every((key) => {
@@ -170,7 +181,24 @@ function formatClock(item) {
 
   return new Intl.DateTimeFormat("da-DK", {
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
+    second: "2-digit"
+  }).format(new Date(timeValue));
+}
+
+function formatDateTime(item) {
+  const timeValue = getTimeValue(item);
+  if (!timeValue) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("da-DK", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
   }).format(new Date(timeValue));
 }
 
@@ -340,6 +368,42 @@ function normalizeWinners(data = {}) {
   );
 }
 
+function normalizeQuestionVideo(questionId, data = {}) {
+  if (!QUESTION_ID_PATTERN.test(questionId) || !data || typeof data !== "object") {
+    return null;
+  }
+
+  const storedQuestionId = typeof data.questionId === "string" ? data.questionId : questionId;
+  const url = typeof data.url === "string" ? data.url.trim() : "";
+  const embedUrl = typeof data.embedUrl === "string" ? data.embedUrl.trim() : "";
+  const provider = typeof data.provider === "string" ? data.provider.trim() : "";
+
+  if (storedQuestionId !== questionId || !url || !embedUrl || !provider) {
+    return null;
+  }
+
+  return {
+    questionId,
+    question: typeof data.question === "string" ? data.question : "",
+    questionCategory: typeof data.questionCategory === "string" ? data.questionCategory : "",
+    url,
+    embedUrl,
+    provider,
+    visible: data.visible === true,
+    updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
+    updatedAtClient: typeof data.updatedAtClient === "string" ? data.updatedAtClient : ""
+  };
+}
+
+function normalizeQuestionVideos(data = {}) {
+  return Object.fromEntries(
+    Object.entries(data)
+      .map(([questionId, video]) => normalizeQuestionVideo(questionId, video))
+      .filter(Boolean)
+      .map((video) => [video.questionId, video])
+  );
+}
+
 function getDisplayAnswersForQuestion(questionId) {
   const canonicalAnswers = answersCache.filter((answer) => answer.questionId === questionId);
   const canonicalKeys = new Set(
@@ -447,6 +511,22 @@ function showWinnerStatus(message, options = {}) {
   }, 3500);
 }
 
+function showFrontVideoStatus(message, options = {}) {
+  frontVideoStatusEl.textContent = message;
+
+  if (options.persistent) {
+    window.clearTimeout(frontVideoStatusTimer);
+    return;
+  }
+
+  window.clearTimeout(frontVideoStatusTimer);
+  frontVideoStatusTimer = window.setTimeout(() => {
+    if (frontVideoStatusEl.textContent === message) {
+      frontVideoStatusEl.textContent = "";
+    }
+  }, 3500);
+}
+
 function parseCorrectAnswerValue(rawValue, type) {
   const normalizedType = normalizeQuestionType(type);
   const normalizedValue = String(rawValue || "")
@@ -492,6 +572,89 @@ function formatDistance(questionType, distance) {
   }
 
   return normalizeQuestionType(questionType) === "time" ? `Afvigelse: ${distance} sek.` : `Afvigelse: ${distance}`;
+}
+
+function getYouTubeVideoId(url) {
+  const hostname = url.hostname.replace(/^www\./, "").toLowerCase();
+  const pathParts = url.pathname.split("/").filter(Boolean);
+
+  if (hostname === "youtu.be") {
+    return pathParts[0] || "";
+  }
+
+  if (!hostname.endsWith("youtube.com") && !hostname.endsWith("youtube-nocookie.com")) {
+    return "";
+  }
+
+  const videoId = url.searchParams.get("v");
+  if (videoId) {
+    return videoId;
+  }
+
+  const markerIndex = pathParts.findIndex((part) => ["embed", "shorts", "live"].includes(part));
+  return markerIndex >= 0 ? pathParts[markerIndex + 1] || "" : "";
+}
+
+function getVimeoVideoId(url) {
+  const hostname = url.hostname.replace(/^www\./, "").toLowerCase();
+  if (!hostname.endsWith("vimeo.com")) {
+    return "";
+  }
+
+  const pathParts = url.pathname.split("/").filter(Boolean);
+  const videoPart = pathParts.find((part) => /^\d+$/.test(part));
+  return videoPart || "";
+}
+
+function isDirectVideoUrl(url) {
+  const path = url.pathname.toLowerCase();
+  return DIRECT_VIDEO_EXTENSIONS.some((extension) => path.endsWith(extension));
+}
+
+function parseFrontVideoUrl(rawUrl) {
+  const trimmedUrl = String(rawUrl || "").trim();
+  if (!trimmedUrl) {
+    return null;
+  }
+
+  let url;
+  try {
+    url = new URL(trimmedUrl, window.location.href);
+  } catch {
+    return null;
+  }
+
+  if (!["http:", "https:"].includes(url.protocol)) {
+    return null;
+  }
+
+  const youtubeId = getYouTubeVideoId(url);
+  if (youtubeId) {
+    return {
+      url: url.toString(),
+      embedUrl: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(youtubeId)}`,
+      provider: "youtube"
+    };
+  }
+
+  const vimeoId = getVimeoVideoId(url);
+  if (vimeoId) {
+    return {
+      url: url.toString(),
+      embedUrl: `https://player.vimeo.com/video/${encodeURIComponent(vimeoId)}`,
+      provider: "vimeo"
+    };
+  }
+
+  if (isDirectVideoUrl(url)) {
+    return {
+      url: url.toString(),
+      embedUrl: url.toString(),
+      provider: "file"
+    };
+  }
+
+  return null;
 }
 
 function setupQrCode() {
@@ -593,6 +756,7 @@ function createAnswerRow(submission) {
 
   const time = document.createElement("span");
   time.textContent = formatClock(submission);
+  time.title = formatDateTime(submission);
 
   meta.append(time);
 
@@ -667,16 +831,80 @@ function createWinnerBlock(winner, question) {
     createdAt: winner.answeredAt,
     createdAtClient: winner.answeredAtClient
   });
+  const answeredAtTitle = formatDateTime({
+    createdAt: winner.answeredAt,
+    createdAtClient: winner.answeredAtClient
+  });
 
   if (answeredAt) {
-    metaParts.push(`Svarede ${answeredAt}`);
+    metaParts.push(`Svarede kl. ${answeredAt}`);
   }
 
   const meta = document.createElement("p");
   meta.textContent = metaParts.join(" · ");
+  if (answeredAtTitle) {
+    meta.title = answeredAtTitle;
+  }
 
   block.append(label, name, answer, meta);
   return block;
+}
+
+function createFrontVideoElement(videoState) {
+  if (videoState.provider === "file") {
+    const video = document.createElement("video");
+    video.src = videoState.embedUrl;
+    video.controls = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+    return video;
+  }
+
+  const iframe = document.createElement("iframe");
+  iframe.src = videoState.embedUrl;
+  iframe.title = "Forsidevideo";
+  iframe.loading = "lazy";
+  iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+  iframe.allowFullscreen = true;
+  return iframe;
+}
+
+function renderFrontVideo() {
+  const activeQuestion = getActiveQuestion();
+  const activeVideo = activeQuestion ? questionVideosCache[activeQuestion.id] : null;
+  const hasSavedVideo = Boolean(activeVideo?.url && activeVideo?.embedUrl);
+  const shouldShowVideo = Boolean(hasSavedVideo && activeVideo.visible);
+  const inputIsFocused = document.activeElement === frontVideoUrlInputEl;
+
+  if (!activeQuestion) {
+    frontVideoStateEl.textContent = "Skjult";
+    frontVideoSaveBtn.disabled = true;
+    frontVideoHideBtn.disabled = true;
+    frontVideoDisplayEl.classList.remove("has-video");
+    frontVideoDisplayEl.replaceChildren(createEmptyMessage("Intet aktivt spørgsmål."));
+    return;
+  }
+
+  if (!inputIsFocused) {
+    frontVideoUrlInputEl.value = activeVideo?.url || "";
+  }
+
+  frontVideoStateEl.textContent = shouldShowVideo ? `Vises på ${activeQuestion.order}` : `Skjult på ${activeQuestion.order}`;
+  frontVideoSaveBtn.disabled = !firebaseState || !activeQuestion;
+  frontVideoHideBtn.disabled = !firebaseState || !activeQuestion || !hasSavedVideo || !activeVideo.visible;
+  frontVideoDisplayEl.classList.toggle("has-video", shouldShowVideo);
+
+  if (!hasSavedVideo) {
+    frontVideoDisplayEl.replaceChildren(createEmptyMessage(`Ingen video gemt til spørgsmål ${activeQuestion.order}.`));
+    return;
+  }
+
+  if (!shouldShowVideo) {
+    frontVideoDisplayEl.replaceChildren(createEmptyMessage(`Video skjult på spørgsmål ${activeQuestion.order}.`));
+    return;
+  }
+
+  frontVideoDisplayEl.replaceChildren(createFrontVideoElement(activeVideo));
 }
 
 function renderParticipants() {
@@ -699,6 +927,7 @@ function createParticipantRow(participant) {
 
   const time = document.createElement("span");
   time.textContent = formatClock(participant) || "Registreret";
+  time.title = formatDateTime(participant);
 
   row.append(name, time);
   return row;
@@ -853,11 +1082,81 @@ async function saveWinner(event) {
   }
 }
 
+function buildQuestionVideoPayload(question, parsedVideo, visible) {
+  return {
+    questionId: question.id,
+    question: question.text,
+    questionCategory: question.category || "",
+    ...parsedVideo,
+    visible,
+    updatedAt: firebaseState.serverTimestamp(),
+    updatedAtClient: new Date().toISOString()
+  };
+}
+
+async function saveFrontVideo(event) {
+  event.preventDefault();
+
+  if (!firebaseState) {
+    return;
+  }
+
+  const activeQuestion = getActiveQuestion();
+  if (!activeQuestion) {
+    showFrontVideoStatus("Vælg et spørgsmål først.");
+    return;
+  }
+
+  const parsedVideo = parseFrontVideoUrl(frontVideoUrlInputEl.value);
+  if (!parsedVideo) {
+    showFrontVideoStatus("Brug et YouTube-, Vimeo- eller direkte video-link.");
+    return;
+  }
+
+  frontVideoSaveBtn.disabled = true;
+  frontVideoHideBtn.disabled = true;
+  showFrontVideoStatus("Gemmer video...");
+
+  try {
+    const { getQuestionVideoRef, set } = firebaseState;
+    await set(getQuestionVideoRef(activeQuestion.id), buildQuestionVideoPayload(activeQuestion, parsedVideo, true));
+    showFrontVideoStatus(`Video vises på spørgsmål ${activeQuestion.order}.`);
+  } catch (error) {
+    showFrontVideoStatus(`Kunne ikke gemme video: ${error.message}`, { persistent: true });
+  } finally {
+    renderFrontVideo();
+  }
+}
+
+async function hideFrontVideo() {
+  const activeQuestion = getActiveQuestion();
+  const activeVideo = activeQuestion ? questionVideosCache[activeQuestion.id] : null;
+
+  if (!firebaseState || !activeQuestion || !activeVideo) {
+    return;
+  }
+
+  frontVideoSaveBtn.disabled = true;
+  frontVideoHideBtn.disabled = true;
+  showFrontVideoStatus("Skjuler video...");
+
+  try {
+    const { getQuestionVideoRef, set } = firebaseState;
+    await set(getQuestionVideoRef(activeQuestion.id), buildQuestionVideoPayload(activeQuestion, activeVideo, false));
+    showFrontVideoStatus(`Video skjult på spørgsmål ${activeQuestion.order}.`);
+  } catch (error) {
+    showFrontVideoStatus(`Kunne ikke skjule video: ${error.message}`, { persistent: true });
+  } finally {
+    renderFrontVideo();
+  }
+}
+
 async function initFirebase() {
   renderActivationControls();
   renderActiveQuestionPanel();
   renderParticipants();
   renderQuestionTypeControls();
+  renderFrontVideo();
 
   if (!hasFirebaseConfig(firebaseConfig)) {
     activeQuestionStatusEl.textContent = "Indsæt Firebase config i firebase-config.js.";
@@ -877,11 +1176,13 @@ async function initFirebase() {
     const participantsRef = database.ref(db, firebaseSettings.participantsPath);
     const submissionsRef = database.ref(db, firebaseSettings.submissionsPath);
     const winnersRef = database.ref(db, firebaseSettings.winnersPath);
+    const questionVideosRef = database.ref(db, firebaseSettings.questionVideosPath);
 
     firebaseState = {
       activeQuestionRef,
       getQuestionTypeRef: (questionId) => database.ref(db, `${firebaseSettings.questionsPath}/${questionId}/type`),
       getWinnerRef: (questionId) => database.ref(db, `${firebaseSettings.winnersPath}/${questionId}`),
+      getQuestionVideoRef: (questionId) => database.ref(db, `${firebaseSettings.questionVideosPath}/${questionId}`),
       onValue: database.onValue,
       serverTimestamp: database.serverTimestamp,
       set: database.set
@@ -893,6 +1194,7 @@ async function initFirebase() {
         questionsCache = normalizeQuestions(snapshot.val() || {});
         renderActivationControls();
         renderActiveQuestionPanel();
+        renderFrontVideo();
       },
       (error) => {
         activeQuestionStatusEl.textContent = `Firebase-fejl: ${error.message}`;
@@ -905,6 +1207,7 @@ async function initFirebase() {
         activeQuestionId = normalizeActiveQuestion(snapshot.val() || {});
         renderActivationControls();
         renderActiveQuestionPanel();
+        renderFrontVideo();
       },
       (error) => {
         activeQuestionStatusEl.textContent = `Firebase-fejl: ${error.message}`;
@@ -954,6 +1257,17 @@ async function initFirebase() {
         showWinnerStatus(`Firebase-fejl: ${error.message}`, { persistent: true });
       }
     );
+
+    firebaseState.onValue(
+      questionVideosRef,
+      (snapshot) => {
+        questionVideosCache = normalizeQuestionVideos(snapshot.val() || {});
+        renderFrontVideo();
+      },
+      (error) => {
+        showFrontVideoStatus(`Firebase-fejl: ${error.message}`, { persistent: true });
+      }
+    );
   } catch (error) {
     activeQuestionStatusEl.textContent = `Kunne ikke starte Firebase: ${error.message}`;
   }
@@ -976,6 +1290,8 @@ questionTypeControls.addEventListener("click", (event) => {
   }
 });
 winnerFormEl.addEventListener("submit", saveWinner);
+frontVideoFormEl.addEventListener("submit", saveFrontVideo);
+frontVideoHideBtn.addEventListener("click", hideFrontVideo);
 window.addEventListener("load", () => {
   setupQrCode();
   initFirebase();
