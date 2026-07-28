@@ -24,8 +24,8 @@ jobs:
       - name: Build static site
         run: |
           mkdir -p dist
-          cp index.html answer.html join.html dist/
-          cp style.css home.js script.js join.js firebase-config.js dist/
+          cp index.html answer.html join.html upload.html dist/
+          cp style.css home.js script.js join.js upload.js firebase-config.js dist/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

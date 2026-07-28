@@ -48,23 +48,11 @@
             <div id="front-video-display" class="front-video-display">
               <p class="empty">Ingen video vist.</p>
             </div>
-            <form id="front-video-form" class="front-video-form">
-              <label>
-                <span>Video URL</span>
-                <input
-                  id="front-video-url"
-                  type="url"
-                  inputmode="url"
-                  autocomplete="off"
-                  placeholder="YouTube, Vimeo eller direkte video-link til aktivt spørgsmål"
-                  required
-                />
-              </label>
-              <div class="front-video-actions">
-                <button id="front-video-save" type="submit">Vis video</button>
-                <button id="front-video-hide" type="button" class="secondary">Skjul video</button>
-              </div>
-            </form>
+            <div class="front-video-actions">
+              <button id="front-video-show" type="button">Vis video</button>
+              <button id="front-video-hide" type="button" class="secondary">Skjul video</button>
+              <a class="button-link secondary" href="upload.html">Upload fil</a>
+            </div>
             <p id="front-video-status" class="status-text"></p>
           </section>
 

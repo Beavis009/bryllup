@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="da">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Upload video · Bryllupsquiz</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="page upload-page">
+      <header class="dashboard-topbar">
+        <div>
+          <p class="eyebrow">Bryllupsquiz</p>
+          <h1>Upload video</h1>
+        </div>
+        <a class="button-link secondary" href="index.html">Dashboard</a>
+      </header>
+
+      <section class="panel upload-panel">
+        <div class="board-header">
+          <div>
+            <h2>Video til spørgsmål</h2>
+            <p class="muted-text">Upload erstatter videoen på det valgte spørgsmål</p>
+          </div>
+          <span id="upload-video-state" class="answer-count">Forbinder...</span>
+        </div>
+
+        <form id="upload-video-form" class="upload-video-form">
+          <label>
+            <span>Spørgsmål</span>
+            <select id="upload-question" required></select>
+          </label>
+
+          <label>
+            <span>Videofil</span>
+            <input id="upload-file" type="file" accept="video/*" required />
+          </label>
+
+          <label class="inline-toggle">
+            <input id="upload-visible" type="checkbox" checked />
+            <span>Vis video efter upload</span>
+          </label>
+
+          <button id="upload-submit" type="submit">Upload video</button>
+        </form>
+
+        <div class="upload-progress-wrap">
+          <progress id="upload-progress" value="0" max="100"></progress>
+          <span id="upload-progress-text">0%</span>
+        </div>
+        <p id="upload-status" class="status-text"></p>
+      </section>
+
+      <section class="panel video-panel">
+        <div class="board-header">
+          <div>
+            <h2>Nuværende video</h2>
+            <p id="upload-current-question" class="muted-text">-</p>
+          </div>
+          <div class="front-video-actions">
+            <button id="upload-show-current" type="button">Vis</button>
+            <button id="upload-hide-current" type="button" class="secondary">Skjul</button>
+          </div>
+        </div>
+        <div id="upload-video-display" class="front-video-display">
+          <p class="empty">Ingen video gemt.</p>
+        </div>
+      </section>
+    </main>
+
+    <script src="firebase-config.js"></script>
+    <script src="upload.js"></script>
+  </body>
+</html>

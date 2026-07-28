@@ -1,7 +1,6 @@
 const FIREBASE_SDK_VERSION = "12.16.0";
 const QUESTION_ID_PATTERN = /^q(0|[1-9]|1[0-2])$/;
 const QUESTION_TYPES = ["number", "time"];
-const DIRECT_VIDEO_EXTENSIONS = [".mp4", ".webm", ".ogg", ".mov"];
 const FALLBACK_QUESTIONS = [
   {
     id: "q0",
@@ -116,9 +115,7 @@ const winnerSaveBtn = document.getElementById("winner-save");
 const winnerStatusEl = document.getElementById("winner-status");
 const frontVideoStateEl = document.getElementById("front-video-state");
 const frontVideoDisplayEl = document.getElementById("front-video-display");
-const frontVideoFormEl = document.getElementById("front-video-form");
-const frontVideoUrlInputEl = document.getElementById("front-video-url");
-const frontVideoSaveBtn = document.getElementById("front-video-save");
+const frontVideoShowBtn = document.getElementById("front-video-show");
 const frontVideoHideBtn = document.getElementById("front-video-hide");
 const frontVideoStatusEl = document.getElementById("front-video-status");
 const participantCountEl = document.getElementById("participant-count");
@@ -377,8 +374,20 @@ function normalizeQuestionVideo(questionId, data = {}) {
   const url = typeof data.url === "string" ? data.url.trim() : "";
   const embedUrl = typeof data.embedUrl === "string" ? data.embedUrl.trim() : "";
   const provider = typeof data.provider === "string" ? data.provider.trim() : "";
+  const storagePath = typeof data.storagePath === "string" ? data.storagePath.trim() : "";
+  const fileName = typeof data.fileName === "string" ? data.fileName.trim() : "";
+  const contentType = typeof data.contentType === "string" ? data.contentType.trim() : "";
+  const size = typeof data.size === "number" ? data.size : 0;
 
-  if (storedQuestionId !== questionId || !url || !embedUrl || !provider) {
+  if (
+    storedQuestionId !== questionId ||
+    !url ||
+    !embedUrl ||
+    provider !== "file" ||
+    !storagePath ||
+    !fileName ||
+    !contentType.startsWith("video/")
+  ) {
     return null;
   }
 
@@ -389,6 +398,10 @@ function normalizeQuestionVideo(questionId, data = {}) {
     url,
     embedUrl,
     provider,
+    storagePath,
+    fileName,
+    contentType,
+    size,
     visible: data.visible === true,
     updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
     updatedAtClient: typeof data.updatedAtClient === "string" ? data.updatedAtClient : ""
@@ -572,89 +585,6 @@ function formatDistance(questionType, distance) {
   }
 
   return normalizeQuestionType(questionType) === "time" ? `Afvigelse: ${distance} sek.` : `Afvigelse: ${distance}`;
-}
-
-function getYouTubeVideoId(url) {
-  const hostname = url.hostname.replace(/^www\./, "").toLowerCase();
-  const pathParts = url.pathname.split("/").filter(Boolean);
-
-  if (hostname === "youtu.be") {
-    return pathParts[0] || "";
-  }
-
-  if (!hostname.endsWith("youtube.com") && !hostname.endsWith("youtube-nocookie.com")) {
-    return "";
-  }
-
-  const videoId = url.searchParams.get("v");
-  if (videoId) {
-    return videoId;
-  }
-
-  const markerIndex = pathParts.findIndex((part) => ["embed", "shorts", "live"].includes(part));
-  return markerIndex >= 0 ? pathParts[markerIndex + 1] || "" : "";
-}
-
-function getVimeoVideoId(url) {
-  const hostname = url.hostname.replace(/^www\./, "").toLowerCase();
-  if (!hostname.endsWith("vimeo.com")) {
-    return "";
-  }
-
-  const pathParts = url.pathname.split("/").filter(Boolean);
-  const videoPart = pathParts.find((part) => /^\d+$/.test(part));
-  return videoPart || "";
-}
-
-function isDirectVideoUrl(url) {
-  const path = url.pathname.toLowerCase();
-  return DIRECT_VIDEO_EXTENSIONS.some((extension) => path.endsWith(extension));
-}
-
-function parseFrontVideoUrl(rawUrl) {
-  const trimmedUrl = String(rawUrl || "").trim();
-  if (!trimmedUrl) {
-    return null;
-  }
-
-  let url;
-  try {
-    url = new URL(trimmedUrl, window.location.href);
-  } catch {
-    return null;
-  }
-
-  if (!["http:", "https:"].includes(url.protocol)) {
-    return null;
-  }
-
-  const youtubeId = getYouTubeVideoId(url);
-  if (youtubeId) {
-    return {
-      url: url.toString(),
-      embedUrl: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(youtubeId)}`,
-      provider: "youtube"
-    };
-  }
-
-  const vimeoId = getVimeoVideoId(url);
-  if (vimeoId) {
-    return {
-      url: url.toString(),
-      embedUrl: `https://player.vimeo.com/video/${encodeURIComponent(vimeoId)}`,
-      provider: "vimeo"
-    };
-  }
-
-  if (isDirectVideoUrl(url)) {
-    return {
-      url: url.toString(),
-      embedUrl: url.toString(),
-      provider: "file"
-    };
-  }
-
-  return null;
 }
 
 function setupQrCode() {
@@ -851,22 +781,12 @@ function createWinnerBlock(winner, question) {
 }
 
 function createFrontVideoElement(videoState) {
-  if (videoState.provider === "file") {
-    const video = document.createElement("video");
-    video.src = videoState.embedUrl;
-    video.controls = true;
-    video.playsInline = true;
-    video.preload = "metadata";
-    return video;
-  }
-
-  const iframe = document.createElement("iframe");
-  iframe.src = videoState.embedUrl;
-  iframe.title = "Forsidevideo";
-  iframe.loading = "lazy";
-  iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
-  iframe.allowFullscreen = true;
-  return iframe;
+  const video = document.createElement("video");
+  video.src = videoState.embedUrl;
+  video.controls = true;
+  video.playsInline = true;
+  video.preload = "metadata";
+  return video;
 }
 
 function renderFrontVideo() {
@@ -874,23 +794,18 @@ function renderFrontVideo() {
   const activeVideo = activeQuestion ? questionVideosCache[activeQuestion.id] : null;
   const hasSavedVideo = Boolean(activeVideo?.url && activeVideo?.embedUrl);
   const shouldShowVideo = Boolean(hasSavedVideo && activeVideo.visible);
-  const inputIsFocused = document.activeElement === frontVideoUrlInputEl;
 
   if (!activeQuestion) {
     frontVideoStateEl.textContent = "Skjult";
-    frontVideoSaveBtn.disabled = true;
+    frontVideoShowBtn.disabled = true;
     frontVideoHideBtn.disabled = true;
     frontVideoDisplayEl.classList.remove("has-video");
     frontVideoDisplayEl.replaceChildren(createEmptyMessage("Intet aktivt spørgsmål."));
     return;
   }
 
-  if (!inputIsFocused) {
-    frontVideoUrlInputEl.value = activeVideo?.url || "";
-  }
-
   frontVideoStateEl.textContent = shouldShowVideo ? `Vises på ${activeQuestion.order}` : `Skjult på ${activeQuestion.order}`;
-  frontVideoSaveBtn.disabled = !firebaseState || !activeQuestion;
+  frontVideoShowBtn.disabled = !firebaseState || !hasSavedVideo || shouldShowVideo;
   frontVideoHideBtn.disabled = !firebaseState || !activeQuestion || !hasSavedVideo || !activeVideo.visible;
   frontVideoDisplayEl.classList.toggle("has-video", shouldShowVideo);
 
@@ -1094,41 +1009,7 @@ function buildQuestionVideoPayload(question, parsedVideo, visible) {
   };
 }
 
-async function saveFrontVideo(event) {
-  event.preventDefault();
-
-  if (!firebaseState) {
-    return;
-  }
-
-  const activeQuestion = getActiveQuestion();
-  if (!activeQuestion) {
-    showFrontVideoStatus("Vælg et spørgsmål først.");
-    return;
-  }
-
-  const parsedVideo = parseFrontVideoUrl(frontVideoUrlInputEl.value);
-  if (!parsedVideo) {
-    showFrontVideoStatus("Brug et YouTube-, Vimeo- eller direkte video-link.");
-    return;
-  }
-
-  frontVideoSaveBtn.disabled = true;
-  frontVideoHideBtn.disabled = true;
-  showFrontVideoStatus("Gemmer video...");
-
-  try {
-    const { getQuestionVideoRef, set } = firebaseState;
-    await set(getQuestionVideoRef(activeQuestion.id), buildQuestionVideoPayload(activeQuestion, parsedVideo, true));
-    showFrontVideoStatus(`Video vises på spørgsmål ${activeQuestion.order}.`);
-  } catch (error) {
-    showFrontVideoStatus(`Kunne ikke gemme video: ${error.message}`, { persistent: true });
-  } finally {
-    renderFrontVideo();
-  }
-}
-
-async function hideFrontVideo() {
+async function setFrontVideoVisibility(visible) {
   const activeQuestion = getActiveQuestion();
   const activeVideo = activeQuestion ? questionVideosCache[activeQuestion.id] : null;
 
@@ -1136,16 +1017,18 @@ async function hideFrontVideo() {
     return;
   }
 
-  frontVideoSaveBtn.disabled = true;
+  frontVideoShowBtn.disabled = true;
   frontVideoHideBtn.disabled = true;
-  showFrontVideoStatus("Skjuler video...");
+  showFrontVideoStatus(visible ? "Viser video..." : "Skjuler video...");
 
   try {
     const { getQuestionVideoRef, set } = firebaseState;
-    await set(getQuestionVideoRef(activeQuestion.id), buildQuestionVideoPayload(activeQuestion, activeVideo, false));
-    showFrontVideoStatus(`Video skjult på spørgsmål ${activeQuestion.order}.`);
+    await set(getQuestionVideoRef(activeQuestion.id), buildQuestionVideoPayload(activeQuestion, activeVideo, visible));
+    showFrontVideoStatus(
+      visible ? `Video vises på spørgsmål ${activeQuestion.order}.` : `Video skjult på spørgsmål ${activeQuestion.order}.`
+    );
   } catch (error) {
-    showFrontVideoStatus(`Kunne ikke skjule video: ${error.message}`, { persistent: true });
+    showFrontVideoStatus(`Kunne ikke gemme video: ${error.message}`, { persistent: true });
   } finally {
     renderFrontVideo();
   }
@@ -1290,8 +1173,8 @@ questionTypeControls.addEventListener("click", (event) => {
   }
 });
 winnerFormEl.addEventListener("submit", saveWinner);
-frontVideoFormEl.addEventListener("submit", saveFrontVideo);
-frontVideoHideBtn.addEventListener("click", hideFrontVideo);
+frontVideoShowBtn.addEventListener("click", () => setFrontVideoVisibility(true));
+frontVideoHideBtn.addEventListener("click", () => setFrontVideoVisibility(false));
 window.addEventListener("load", () => {
   setupQrCode();
   initFirebase();

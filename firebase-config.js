@@ -18,5 +18,6 @@ window.firebaseSettings = {
   submissionsPath: "submissions",
   winnersPath: "winners",
   questionVideosPath: "questionVideos",
+  videoStoragePath: "questionVideos",
   allowClientClear: false
 };

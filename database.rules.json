@@ -189,7 +189,7 @@
       ".read": true,
       "$questionId": {
         ".write": "newData.exists() && $questionId.matches(/^q(0|[1-9]|1[0-2])$/)",
-        ".validate": "newData.hasChildren(['questionId', 'question', 'questionCategory', 'url', 'embedUrl', 'provider', 'visible', 'updatedAt', 'updatedAtClient'])",
+        ".validate": "newData.hasChildren(['questionId', 'question', 'questionCategory', 'url', 'embedUrl', 'provider', 'storagePath', 'fileName', 'contentType', 'size', 'visible', 'updatedAt', 'updatedAtClient']) && newData.child('url').val() == newData.child('embedUrl').val()",
         "questionId": {
           ".validate": "newData.isString() && newData.val() == $questionId"
         },
@@ -200,13 +200,25 @@
           ".validate": "newData.isString() && newData.val().length <= 80"
         },
         "url": {
-          ".validate": "newData.isString() && newData.val().matches(/^https?:\\/\\/.+$/) && newData.val().length <= 1000"
+          ".validate": "newData.isString() && newData.val().matches(/^https:\\/\\/firebasestorage\\.googleapis\\.com\\/.+$/) && newData.val().length <= 1000"
         },
         "embedUrl": {
-          ".validate": "newData.isString() && newData.val().matches(/^https?:\\/\\/.+$/) && newData.val().length <= 1000"
+          ".validate": "newData.isString() && newData.val().matches(/^https:\\/\\/firebasestorage\\.googleapis\\.com\\/.+$/) && newData.val().length <= 1000"
         },
         "provider": {
-          ".validate": "newData.isString() && (newData.val() == 'youtube' || newData.val() == 'vimeo' || newData.val() == 'file')"
+          ".validate": "newData.isString() && newData.val() == 'file'"
+        },
+        "storagePath": {
+          ".validate": "newData.isString() && newData.val().matches(/^questionVideos\\/q(0|[1-9]|1[0-2])\\/.+$/) && newData.val().length <= 500"
+        },
+        "fileName": {
+          ".validate": "newData.isString() && newData.val().length <= 200"
+        },
+        "contentType": {
+          ".validate": "newData.isString() && newData.val().matches(/^video\\/.+$/) && newData.val().length <= 100"
+        },
+        "size": {
+          ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 524288000"
         },
         "visible": {
           ".validate": "newData.isBoolean()"
