@@ -11,23 +11,26 @@
     <main class="page">
       <section class="hero">
         <p class="eyebrow">Bryllupsquiz</p>
-        <h1>12 spørgsmål til festen</h1>
-        <p>Scan QR-koden, svar på alle spørgsmålene og følg vinderne undervejs.</p>
+        <h1>Scan og start quizzen</h1>
+        <p>Brug QR-koden på telefonen, eller fortsæt direkte til første spørgsmål.</p>
       </section>
 
-      <section class="panel">
-        <div class="mobile-cta">
-          <div>
-            <strong>Til mobil</strong>
-            <p>Scan QR-koden og deltag direkte fra telefonen.</p>
-          </div>
-          <div class="qr-box">
-            <img id="qr-code" alt="QR-kode til quizsiden" />
-          </div>
-          <button id="share-link" type="button" class="secondary">Del link</button>
-          <p id="share-status" class="status-text"></p>
+      <section id="start-screen" class="panel start-screen">
+        <div class="start-copy">
+          <strong>Velkommen</strong>
+          <p>Scan QR-koden og deltag fra telefonen.</p>
         </div>
+        <div class="qr-box large">
+          <img id="qr-code" alt="QR-kode til quizsiden" />
+        </div>
+        <div class="start-actions">
+          <button id="start-quiz" type="button">Gå til første spørgsmål</button>
+          <button id="share-link" type="button" class="secondary">Del link</button>
+        </div>
+        <p id="share-status" class="status-text"></p>
+      </section>
 
+      <section id="quiz-panel" class="panel" hidden>
         <form id="quiz-form">
           <label>
             <span>Navn</span>
@@ -56,7 +59,7 @@
         </div>
       </section>
 
-      <section class="board">
+      <section id="results-board" class="board" hidden>
         <div class="board-header">
           <h2>Spørgsmål og vindere</h2>
           <button id="clear-btn" type="button" class="secondary" hidden>Ryd alt</button>

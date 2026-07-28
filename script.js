@@ -9,10 +9,14 @@ const FALLBACK_QUESTIONS = Array.from({ length: QUESTION_COUNT }, (_, index) => 
 const form = document.getElementById("quiz-form");
 const questionFields = document.getElementById("question-fields");
 const questionBoard = document.getElementById("question-board");
+const startScreen = document.getElementById("start-screen");
+const quizPanel = document.getElementById("quiz-panel");
+const resultsBoard = document.getElementById("results-board");
 const participantCountEl = document.getElementById("participant-count");
 const answerCountEl = document.getElementById("answer-count");
 const winnerCountEl = document.getElementById("winner-count");
 const clearBtn = document.getElementById("clear-btn");
+const startBtn = document.getElementById("start-quiz");
 const shareBtn = document.getElementById("share-link");
 const statusEl = document.getElementById("share-status");
 const saveStatusEl = document.getElementById("save-status");
@@ -39,6 +43,7 @@ let hasLoadedQuestions = false;
 let hasLoadedSubmissions = false;
 let hasLoadedWinners = false;
 let hasShownReadyStatus = false;
+let hasStartedQuiz = false;
 let statusTimer;
 
 function hasFirebaseConfig(config) {
@@ -93,6 +98,7 @@ function sortQuestions(questions) {
 }
 
 function setFormDisabled(disabled) {
+  startBtn.disabled = disabled;
   nameInput.disabled = disabled;
   submitBtn.disabled = disabled;
 
@@ -135,6 +141,16 @@ function showShareStatus(message) {
       statusEl.textContent = "";
     }
   }, 2500);
+}
+
+function showQuiz() {
+  hasStartedQuiz = true;
+  startScreen.hidden = true;
+  quizPanel.hidden = false;
+  resultsBoard.hidden = false;
+  currentQuestionIndex = 0;
+  renderQuestionFields();
+  nameInput.focus();
 }
 
 function normalizeQuestion(id, data = {}) {
@@ -728,6 +744,7 @@ clearBtn.addEventListener("click", async () => {
 });
 
 shareBtn.addEventListener("click", shareLink);
+startBtn.addEventListener("click", showQuiz);
 window.addEventListener("load", () => {
   setupQrCode();
   initFirebase();
