@@ -9,7 +9,7 @@
       ".write": "newData.exists()",
       ".validate": "newData.hasChildren(['questionId', 'activatedAt', 'activatedAtClient'])",
       "questionId": {
-        ".validate": "newData.isString() && newData.val().matches(/^q([1-9]|1[0-2])$/)"
+        ".validate": "newData.isString() && newData.val().matches(/^q(0|[1-9]|1[0-2])$/)"
       },
       "activatedAt": {
         ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 1000"
@@ -47,7 +47,7 @@
       ".read": true,
       "$questionId": {
         "$participantId": {
-          ".write": "!data.exists() && newData.exists() && $questionId.matches(/^q([1-9]|1[0-2])$/)",
+          ".write": "!data.exists() && newData.exists() && $questionId.matches(/^q(0|[1-9]|1[0-2])$/)",
           ".validate": "newData.hasChildren(['participantId', 'name', 'questionId', 'question', 'answer', 'createdAt', 'createdAtClient', 'pageUrl'])",
           "participantId": {
             ".validate": "newData.isString() && newData.val() == $participantId && newData.val().length > 0 && newData.val().length <= 120"
@@ -56,7 +56,7 @@
             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
           },
           "questionId": {
-            ".validate": "newData.isString() && newData.val() == $questionId && newData.val().matches(/^q([1-9]|1[0-2])$/)"
+            ".validate": "newData.isString() && newData.val() == $questionId && newData.val().matches(/^q(0|[1-9]|1[0-2])$/)"
           },
           "question": {
             ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 250"
@@ -91,7 +91,7 @@
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
         },
         "questionId": {
-          ".validate": "newData.isString() && newData.val().matches(/^q([1-9]|1[0-2])$/)"
+          ".validate": "newData.isString() && newData.val().matches(/^q(0|[1-9]|1[0-2])$/)"
         },
         "question": {
           ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 250"
@@ -116,7 +116,7 @@
     "winners": {
       ".read": true,
       "$questionId": {
-        ".write": "newData.exists() && $questionId.matches(/^q([1-9]|1[0-2])$/)",
+        ".write": "newData.exists() && $questionId.matches(/^q(0|[1-9]|1[0-2])$/)",
         ".validate": "newData.hasChildren(['questionId', 'question', 'submissionId', 'winnerName', 'answer', 'savedAt', 'savedAtClient'])",
         "questionId": {
           ".validate": "newData.isString() && newData.val() == $questionId"

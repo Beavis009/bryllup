@@ -1,10 +1,18 @@
 const FIREBASE_SDK_VERSION = "12.16.0";
-const QUESTION_COUNT = 12;
-const FALLBACK_QUESTIONS = Array.from({ length: QUESTION_COUNT }, (_, index) => ({
-  id: `q${index + 1}`,
-  order: index + 1,
-  text: String(index + 1)
-}));
+const NUMBERED_QUESTION_COUNT = 12;
+const QUESTION_ID_PATTERN = /^q(0|[1-9]|1[0-2])$/;
+const FALLBACK_QUESTIONS = [
+  {
+    id: "q0",
+    order: 0,
+    text: "Hvormange gange på en dag siger Anna GRØNDAHL!"
+  },
+  ...Array.from({ length: NUMBERED_QUESTION_COUNT }, (_, index) => ({
+    id: `q${index + 1}`,
+    order: index + 1,
+    text: String(index + 1)
+  }))
+];
 
 const qrImage = document.getElementById("qr-code");
 const startBtn = document.getElementById("start-quiz");
@@ -99,7 +107,7 @@ function normalizeQuestions(data = {}) {
   const loadedQuestions = Object.fromEntries(
     Object.entries(data)
       .map(([id, question]) => normalizeQuestion(id, question))
-      .filter((question) => /^q([1-9]|1[0-2])$/.test(question.id))
+      .filter((question) => QUESTION_ID_PATTERN.test(question.id))
       .map((question) => [question.id, question])
   );
 
@@ -108,7 +116,7 @@ function normalizeQuestions(data = {}) {
 
 function normalizeActiveQuestion(data = {}) {
   const questionId = typeof data.questionId === "string" ? data.questionId : "q1";
-  return /^q([1-9]|1[0-2])$/.test(questionId) ? questionId : "q1";
+  return QUESTION_ID_PATTERN.test(questionId) ? questionId : "q1";
 }
 
 function normalizeParticipant(id, data = {}) {
@@ -138,7 +146,7 @@ function normalizeSubmission(id, data = {}) {
   const answer = typeof data.answer === "string" ? data.answer.trim() : "";
   const name = typeof data.name === "string" && data.name.trim() ? data.name.trim() : "Ukendt";
 
-  if (!/^q([1-9]|1[0-2])$/.test(questionId) || !answer) {
+  if (!QUESTION_ID_PATTERN.test(questionId) || !answer) {
     return null;
   }
 
@@ -236,9 +244,8 @@ function renderActivationControls() {
 
   activationGrid.replaceChildren(...buttons);
   const activeQuestion = getActiveQuestion();
-  const questionIndex = questionsCache.findIndex((question) => question.id === activeQuestion.id);
   activeQuestionStatusEl.textContent = activeQuestion
-    ? `Aktivt spørgsmål ${questionIndex + 1}`
+    ? `Aktivt spørgsmål ${activeQuestion.order}`
     : "Intet aktivt spørgsmål";
 }
 
@@ -253,10 +260,9 @@ function renderActiveQuestionPanel() {
     return;
   }
 
-  const questionIndex = questionsCache.findIndex((question) => question.id === activeQuestion.id);
   const activeAnswers = getDisplayAnswersForQuestion(activeQuestion.id);
 
-  activeQuestionLabelEl.textContent = `Aktivt spørgsmål ${questionIndex + 1} af ${questionsCache.length}`;
+  activeQuestionLabelEl.textContent = `Aktivt spørgsmål ${activeQuestion.order}`;
   activeQuestionTitleEl.textContent = activeQuestion.text;
   activeAnswerCountEl.textContent = formatAnswerCount(activeAnswers.length);
 

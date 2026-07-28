@@ -1,11 +1,19 @@
 const FIREBASE_SDK_VERSION = "12.16.0";
-const QUESTION_COUNT = 12;
+const NUMBERED_QUESTION_COUNT = 12;
 const PARTICIPANT_COOKIE_NAME = "bryllupParticipant";
-const FALLBACK_QUESTIONS = Array.from({ length: QUESTION_COUNT }, (_, index) => ({
-  id: `q${index + 1}`,
-  order: index + 1,
-  text: String(index + 1)
-}));
+const QUESTION_ID_PATTERN = /^q(0|[1-9]|1[0-2])$/;
+const FALLBACK_QUESTIONS = [
+  {
+    id: "q0",
+    order: 0,
+    text: "Hvormange gange på en dag siger Anna GRØNDAHL!"
+  },
+  ...Array.from({ length: NUMBERED_QUESTION_COUNT }, (_, index) => ({
+    id: `q${index + 1}`,
+    order: index + 1,
+    text: String(index + 1)
+  }))
+];
 
 const quizForm = document.getElementById("quiz-form");
 const questionFields = document.getElementById("question-fields");
@@ -165,7 +173,7 @@ function normalizeQuestions(data = {}) {
   const loadedQuestions = Object.fromEntries(
     Object.entries(data)
       .map(([id, question]) => normalizeQuestion(id, question))
-      .filter((question) => /^q([1-9]|1[0-2])$/.test(question.id))
+      .filter((question) => QUESTION_ID_PATTERN.test(question.id))
       .map((question) => [question.id, question])
   );
 
@@ -174,7 +182,7 @@ function normalizeQuestions(data = {}) {
 
 function normalizeActiveQuestion(data = {}) {
   const questionId = typeof data.questionId === "string" ? data.questionId : "q1";
-  return /^q([1-9]|1[0-2])$/.test(questionId) ? questionId : "q1";
+  return QUESTION_ID_PATTERN.test(questionId) ? questionId : "q1";
 }
 
 function normalizeAnswer(participantId, questionId, data = {}) {
@@ -201,7 +209,7 @@ function normalizeLegacySubmission(id, data = {}) {
   const participantId = typeof data.participantId === "string" ? data.participantId : "";
   const normalized = normalizeAnswer(participantId, questionId, data);
 
-  if (!normalized || !/^q([1-9]|1[0-2])$/.test(questionId)) {
+  if (!normalized || !QUESTION_ID_PATTERN.test(questionId)) {
     return null;
   }
 
@@ -274,7 +282,6 @@ function renderQuestionField() {
   }
 
   const savedAnswer = getSavedAnswerForActiveQuestion();
-  const questionIndex = questionsCache.findIndex((item) => item.id === question.id);
   const wrapper = document.createElement("section");
   wrapper.className = "question-step active-question-step";
 
@@ -282,7 +289,7 @@ function renderQuestionField() {
   meta.className = "question-step-meta";
 
   const counter = document.createElement("span");
-  counter.textContent = `Aktivt spørgsmål ${questionIndex + 1} af ${questionsCache.length}`;
+  counter.textContent = `Aktivt spørgsmål ${question.order}`;
 
   const state = document.createElement("span");
   state.textContent = savedAnswer ? "Besvaret" : "Live";
