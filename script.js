@@ -8,42 +8,20 @@ const FALLBACK_QUESTIONS = Array.from({ length: QUESTION_COUNT }, (_, index) => 
 
 const form = document.getElementById("quiz-form");
 const questionFields = document.getElementById("question-fields");
-const questionBoard = document.getElementById("question-board");
-const startScreen = document.getElementById("start-screen");
-const quizPanel = document.getElementById("quiz-panel");
-const resultsBoard = document.getElementById("results-board");
-const participantCountEl = document.getElementById("participant-count");
-const answerCountEl = document.getElementById("answer-count");
-const winnerCountEl = document.getElementById("winner-count");
-const clearBtn = document.getElementById("clear-btn");
-const startBtn = document.getElementById("start-quiz");
-const shareBtn = document.getElementById("share-link");
-const statusEl = document.getElementById("share-status");
 const saveStatusEl = document.getElementById("save-status");
-const qrImage = document.getElementById("qr-code");
 const nameInput = document.getElementById("name");
 const submitBtn = form.querySelector('button[type="submit"]');
 const firebaseConfig = window.firebaseConfig || {};
 const firebaseSettings = {
   questionsPath: "questions",
   submissionsPath: "submissions",
-  winnersPath: "winners",
-  allowClientClear: false,
   ...(window.firebaseSettings || {})
 };
-const isAdmin = new URLSearchParams(window.location.search).get("admin") === "1";
 
 let questionsCache = [...FALLBACK_QUESTIONS];
-let submissionsCache = [];
-let winnersCache = {};
 let draftAnswers = {};
 let currentQuestionIndex = 0;
 let firebaseState = null;
-let hasLoadedQuestions = false;
-let hasLoadedSubmissions = false;
-let hasLoadedWinners = false;
-let hasShownReadyStatus = false;
-let hasStartedQuiz = false;
 let statusTimer;
 
 function hasFirebaseConfig(config) {
@@ -53,19 +31,8 @@ function hasFirebaseConfig(config) {
   });
 }
 
-function getGuestUrl() {
-  const url = new URL(window.location.href);
-  url.searchParams.delete("admin");
-  url.hash = "";
-  return url.toString();
-}
-
 function getQuestions() {
   return questionsCache;
-}
-
-function getQuestion(id) {
-  return getQuestions().find((question) => question.id === id);
 }
 
 function getCurrentQuestion() {
@@ -76,29 +43,11 @@ function getAnswerInput(questionId) {
   return document.getElementById(`answer-${questionId}`);
 }
 
-function getCreatedAtMs(value) {
-  if (typeof value === "number") {
-    return value;
-  }
-
-  if (typeof value === "string") {
-    const parsed = Date.parse(value);
-    return Number.isNaN(parsed) ? 0 : parsed;
-  }
-
-  return 0;
-}
-
-function sortSubmissions(submissions) {
-  return [...submissions].sort((a, b) => a.createdAtMs - b.createdAtMs);
-}
-
 function sortQuestions(questions) {
   return [...questions].sort((a, b) => a.order - b.order);
 }
 
 function setFormDisabled(disabled) {
-  startBtn.disabled = disabled;
   nameInput.disabled = disabled;
   submitBtn.disabled = disabled;
 
@@ -114,43 +63,19 @@ function setFormDisabled(disabled) {
   });
 }
 
-function setClearButtonState() {
-  clearBtn.hidden = !firebaseSettings.allowClientClear;
-  clearBtn.disabled = !firebaseState;
-}
+function showStatus(message, options = {}) {
+  saveStatusEl.textContent = message;
 
-function showStatus(target, message, options = {}) {
-  target.textContent = message;
-
-  if (target !== saveStatusEl || options.persistent) {
+  if (options.persistent) {
     return;
   }
 
   window.clearTimeout(statusTimer);
   statusTimer = window.setTimeout(() => {
-    if (target.textContent === message) {
-      target.textContent = "";
+    if (saveStatusEl.textContent === message) {
+      saveStatusEl.textContent = "";
     }
   }, 3000);
-}
-
-function showShareStatus(message) {
-  showStatus(statusEl, message);
-  window.setTimeout(() => {
-    if (statusEl.textContent === message) {
-      statusEl.textContent = "";
-    }
-  }, 2500);
-}
-
-function showQuiz() {
-  hasStartedQuiz = true;
-  startScreen.hidden = true;
-  quizPanel.hidden = false;
-  resultsBoard.hidden = false;
-  currentQuestionIndex = 0;
-  renderQuestionFields();
-  nameInput.focus();
 }
 
 function normalizeQuestion(id, data = {}) {
@@ -175,45 +100,6 @@ function normalizeQuestions(data = {}) {
   );
 
   return sortQuestions(FALLBACK_QUESTIONS.map((fallback) => loadedQuestions[fallback.id] || fallback));
-}
-
-function normalizeSubmission(id, data = {}) {
-  const answers = {};
-
-  getQuestions().forEach((question) => {
-    const answer = data.answers && typeof data.answers[question.id] === "string" ? data.answers[question.id] : "";
-    answers[question.id] = answer.trim();
-  });
-
-  return {
-    id,
-    name: typeof data.name === "string" ? data.name.trim() : "",
-    answers,
-    createdAtMs: getCreatedAtMs(data.createdAt) || getCreatedAtMs(data.createdAtClient)
-  };
-}
-
-function normalizeWinner(questionId, data = {}) {
-  const question = getQuestion(questionId);
-
-  return {
-    questionId,
-    submissionId: typeof data.submissionId === "string" ? data.submissionId : "",
-    winnerName: typeof data.winnerName === "string" ? data.winnerName.trim() : "",
-    answer: typeof data.answer === "string" ? data.answer.trim() : "",
-    question: typeof data.question === "string" ? data.question.trim() : question ? question.text : "",
-    savedAtMs: getCreatedAtMs(data.savedAt) || getCreatedAtMs(data.savedAtClient)
-  };
-}
-
-function getAnswersForQuestion(questionId) {
-  return sortSubmissions(submissionsCache)
-    .map((submission) => ({
-      submissionId: submission.id,
-      name: submission.name,
-      answer: submission.answers[questionId]
-    }))
-    .filter((entry) => entry.name && entry.answer);
 }
 
 function syncVisibleAnswer() {
@@ -258,6 +144,7 @@ function renderQuestionFields() {
   counter.textContent = `Spørgsmål ${currentQuestionIndex + 1} af ${questions.length}`;
 
   const completed = document.createElement("span");
+  completed.dataset.completedCount = "true";
   completed.textContent = `${completedCount}/${questions.length} besvaret`;
 
   meta.append(counter, completed);
@@ -308,170 +195,8 @@ function renderQuestionFields() {
   nav.append(previousButton, dots, nextButton);
   wrapper.append(meta, title, textarea, nav);
   questionFields.replaceChildren(wrapper);
-}
 
-function renderSummary() {
-  const totalAnswers = submissionsCache.reduce((total, submission) => {
-    return total + getQuestions().filter((question) => submission.answers[question.id]).length;
-  }, 0);
-  const winnerCount = getQuestions().filter((question) => winnersCache[question.id]).length;
-
-  participantCountEl.textContent = submissionsCache.length;
-  answerCountEl.textContent = totalAnswers;
-  winnerCountEl.textContent = `${winnerCount}/${QUESTION_COUNT}`;
-}
-
-function createWinnerBlock(question, winner) {
-  const wrapper = document.createElement("div");
-  wrapper.className = winner ? "winner-block has-winner" : "winner-block";
-
-  const label = document.createElement("span");
-  label.textContent = "Vinder";
-
-  const value = document.createElement("strong");
-  value.textContent = winner ? winner.winnerName : "Ikke valgt endnu";
-
-  const answer = document.createElement("p");
-  answer.textContent = winner ? winner.answer : "Vælg vinderen fra admin-visningen.";
-
-  wrapper.append(label, value, answer);
-  return wrapper;
-}
-
-function createAnswerList(questionId) {
-  const answers = getAnswersForQuestion(questionId);
-  const list = document.createElement("div");
-  list.className = "answer-list";
-
-  if (!answers.length) {
-    const empty = document.createElement("p");
-    empty.className = "empty";
-    empty.textContent = "Ingen svar endnu.";
-    list.append(empty);
-    return list;
-  }
-
-  answers.forEach((entry) => {
-    const row = document.createElement("div");
-    row.className = "answer-row";
-
-    const name = document.createElement("strong");
-    name.textContent = entry.name;
-
-    const answer = document.createElement("p");
-    answer.textContent = entry.answer;
-
-    row.append(name, answer);
-    list.append(row);
-  });
-
-  return list;
-}
-
-function createWinnerForm(question) {
-  const answers = getAnswersForQuestion(question.id);
-  const winner = winnersCache[question.id];
-  const formEl = document.createElement("form");
-  formEl.className = "winner-form";
-  formEl.dataset.questionId = question.id;
-
-  const select = document.createElement("select");
-  select.name = "winner";
-  select.required = true;
-
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Vælg vinder";
-  select.append(placeholder);
-
-  answers.forEach((entry) => {
-    const option = document.createElement("option");
-    option.value = entry.submissionId;
-    option.textContent = `${entry.name}: ${entry.answer}`;
-    option.selected = winner && winner.submissionId === entry.submissionId;
-    select.append(option);
-  });
-
-  const button = document.createElement("button");
-  button.type = "submit";
-  button.className = "secondary";
-  button.textContent = "Gem vinder";
-  button.disabled = !answers.length || !firebaseState;
-
-  formEl.append(select, button);
-  return formEl;
-}
-
-function createQuestionCard(question, index) {
-  const card = document.createElement("article");
-  card.className = "question-card";
-
-  const header = document.createElement("div");
-  header.className = "question-card-header";
-
-  const titleGroup = document.createElement("div");
-  const number = document.createElement("span");
-  number.className = "question-number";
-  number.textContent = `Spørgsmål ${index + 1}`;
-  const title = document.createElement("h3");
-  title.textContent = question.text;
-  titleGroup.append(number, title);
-
-  const answerCount = document.createElement("span");
-  answerCount.className = "answer-count";
-  const answers = getAnswersForQuestion(question.id);
-  answerCount.textContent = `${answers.length} svar`;
-
-  header.append(titleGroup, answerCount);
-  card.append(header, createWinnerBlock(question, winnersCache[question.id]), createAnswerList(question.id));
-
-  if (isAdmin) {
-    card.append(createWinnerForm(question));
-  }
-
-  return card;
-}
-
-function renderBoard() {
-  const cards = getQuestions().map(createQuestionCard);
-  questionBoard.replaceChildren(...cards);
-}
-
-function render() {
-  renderSummary();
-  renderBoard();
-}
-
-function setupQrCode() {
-  const url = getGuestUrl();
-  qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`;
-  qrImage.alt = `QR-kode til ${url}`;
-}
-
-function shareLink() {
-  const url = getGuestUrl();
-
-  if (navigator.share) {
-    navigator
-      .share({
-        title: "Bryllupsquiz",
-        text: "Svar på bryllupsquizzen",
-        url
-      })
-      .then(() => showShareStatus("Link delt"))
-      .catch(() => showShareStatus("Deling annulleret"));
-    return;
-  }
-
-  if (!navigator.clipboard) {
-    showShareStatus("Kopiér linket fra adresselinjen");
-    return;
-  }
-
-  navigator.clipboard
-    .writeText(url)
-    .then(() => showShareStatus("Link kopieret"))
-    .catch(() => showShareStatus("Kunne ikke kopiere link"));
+  setFormDisabled(!firebaseState);
 }
 
 function getFormAnswers() {
@@ -490,6 +215,13 @@ function isCompleteSubmission(name, answers) {
   return Boolean(name) && getFirstMissingQuestionIndex(answers) === -1;
 }
 
+function getAnswerPageUrl() {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
 async function saveSubmission(name, answers) {
   const { push, serverTimestamp, set, submissionsRef } = firebaseState;
   const newSubmissionRef = push(submissionsRef);
@@ -499,63 +231,20 @@ async function saveSubmission(name, answers) {
     answers,
     createdAt: serverTimestamp(),
     createdAtClient: new Date().toISOString(),
-    pageUrl: getGuestUrl()
+    pageUrl: getAnswerPageUrl()
   });
-}
-
-async function saveWinner(questionId, submissionId) {
-  const { child, serverTimestamp, set, winnersRef } = firebaseState;
-  const question = getQuestion(questionId);
-  const submission = submissionsCache.find((entry) => entry.id === submissionId);
-
-  if (!question || !submission || !submission.answers[questionId]) {
-    throw new Error("Vinder kunne ikke findes");
-  }
-
-  await set(child(winnersRef, questionId), {
-    questionId,
-    question: question.text,
-    submissionId,
-    winnerName: submission.name,
-    answer: submission.answers[questionId],
-    savedAt: serverTimestamp(),
-    savedAtClient: new Date().toISOString()
-  });
-}
-
-async function clearAll() {
-  const { remove, submissionsRef, winnersRef } = firebaseState;
-  await Promise.all([remove(submissionsRef), remove(winnersRef)]);
-}
-
-function updateReadyState() {
-  const isReady = hasLoadedQuestions && hasLoadedSubmissions && hasLoadedWinners;
-  renderQuestionFields();
-  render();
-  setFormDisabled(!isReady);
-
-  if (isReady) {
-    if (hasShownReadyStatus) {
-      return;
-    }
-
-    hasShownReadyStatus = true;
-    showStatus(saveStatusEl, "Klar til svar");
-  }
 }
 
 async function initFirebase() {
   renderQuestionFields();
-  render();
   setFormDisabled(true);
-  setClearButtonState();
 
   if (!hasFirebaseConfig(firebaseConfig)) {
-    showStatus(saveStatusEl, "Indsæt Firebase config i firebase-config.js.", { persistent: true });
+    showStatus("Indsæt Firebase config i firebase-config.js.", { persistent: true });
     return;
   }
 
-  showStatus(saveStatusEl, "Forbinder til Firebase...", { persistent: true });
+  showStatus("Forbinder til Firebase...", { persistent: true });
 
   try {
     const [{ initializeApp }, database] = await Promise.all([
@@ -566,70 +255,32 @@ async function initFirebase() {
     const db = database.getDatabase(app);
     const questionsRef = database.ref(db, firebaseSettings.questionsPath);
     const submissionsRef = database.ref(db, firebaseSettings.submissionsPath);
-    const winnersRef = database.ref(db, firebaseSettings.winnersPath);
 
     firebaseState = {
-      child: database.child,
       onValue: database.onValue,
       push: database.push,
-      remove: database.remove,
       serverTimestamp: database.serverTimestamp,
       set: database.set,
-      questionsRef,
-      submissionsRef,
-      winnersRef
+      submissionsRef
     };
 
-    setClearButtonState();
     firebaseState.onValue(
       questionsRef,
       (snapshot) => {
         questionsCache = normalizeQuestions(snapshot.val() || {});
         currentQuestionIndex = Math.min(currentQuestionIndex, questionsCache.length - 1);
-        hasLoadedQuestions = true;
-        updateReadyState();
+        renderQuestionFields();
+        setFormDisabled(false);
+        showStatus("Klar til svar");
       },
       (error) => {
         setFormDisabled(true);
-        showStatus(saveStatusEl, `Firebase-fejl: ${error.message}`, { persistent: true });
-      }
-    );
-
-    firebaseState.onValue(
-      submissionsRef,
-      (snapshot) => {
-        const data = snapshot.val() || {};
-        submissionsCache = Object.entries(data)
-          .map(([id, submission]) => normalizeSubmission(id, submission))
-          .filter((submission) => submission.name && getQuestions().every((question) => submission.answers[question.id]));
-        hasLoadedSubmissions = true;
-        updateReadyState();
-      },
-      (error) => {
-        setFormDisabled(true);
-        showStatus(saveStatusEl, `Firebase-fejl: ${error.message}`, { persistent: true });
-      }
-    );
-
-    firebaseState.onValue(
-      winnersRef,
-      (snapshot) => {
-        const data = snapshot.val() || {};
-        winnersCache = Object.fromEntries(
-          Object.entries(data)
-            .map(([questionId, winner]) => [questionId, normalizeWinner(questionId, winner)])
-            .filter(([questionId, winner]) => getQuestion(questionId) && winner.winnerName && winner.answer)
-        );
-        hasLoadedWinners = true;
-        updateReadyState();
-      },
-      (error) => {
-        showStatus(saveStatusEl, `Firebase-fejl: ${error.message}`, { persistent: true });
+        showStatus(`Firebase-fejl: ${error.message}`, { persistent: true });
       }
     );
   } catch (error) {
     setFormDisabled(true);
-    showStatus(saveStatusEl, `Kunne ikke starte Firebase: ${error.message}`, { persistent: true });
+    showStatus(`Kunne ikke starte Firebase: ${error.message}`, { persistent: true });
   }
 }
 
@@ -637,7 +288,11 @@ questionFields.addEventListener("input", (event) => {
   const question = getCurrentQuestion();
   if (question && event.target.id === `answer-${question.id}`) {
     draftAnswers[question.id] = event.target.value;
-    renderSummary();
+    const completed = questionFields.querySelector("[data-completed-count]");
+    if (completed) {
+      const completedCount = getQuestions().filter((item) => draftAnswers[item.id] && draftAnswers[item.id].trim()).length;
+      completed.textContent = `${completedCount}/${getQuestions().length} besvaret`;
+    }
   }
 });
 
@@ -675,12 +330,12 @@ form.addEventListener("submit", async (event) => {
       getAnswerInput(getCurrentQuestion().id).focus();
     }
 
-    showStatus(saveStatusEl, "Udfyld navn og alle 12 svar.");
+    showStatus("Udfyld navn og alle 12 svar.");
     return;
   }
 
   setFormDisabled(true);
-  showStatus(saveStatusEl, "Gemmer...");
+  showStatus("Gemmer...");
 
   try {
     await saveSubmission(name, answers);
@@ -689,63 +344,12 @@ form.addEventListener("submit", async (event) => {
     currentQuestionIndex = 0;
     renderQuestionFields();
     nameInput.focus();
-    showStatus(saveStatusEl, "Svar gemt");
+    showStatus("Svar gemt");
   } catch (error) {
-    showStatus(saveStatusEl, `Kunne ikke gemme: ${error.message}`, { persistent: true });
+    showStatus(`Kunne ikke gemme: ${error.message}`, { persistent: true });
   } finally {
     setFormDisabled(false);
   }
 });
 
-questionBoard.addEventListener("submit", async (event) => {
-  const winnerForm = event.target.closest(".winner-form");
-  if (!winnerForm) {
-    return;
-  }
-
-  event.preventDefault();
-  const questionId = winnerForm.dataset.questionId;
-  const submissionId = new FormData(winnerForm).get("winner");
-
-  if (!firebaseState || !questionId || !submissionId) {
-    return;
-  }
-
-  const button = winnerForm.querySelector("button");
-  button.disabled = true;
-  showStatus(saveStatusEl, "Gemmer vinder...");
-
-  try {
-    await saveWinner(questionId, submissionId);
-    showStatus(saveStatusEl, "Vinder gemt");
-  } catch (error) {
-    showStatus(saveStatusEl, `Kunne ikke gemme vinder: ${error.message}`, { persistent: true });
-  } finally {
-    button.disabled = false;
-  }
-});
-
-clearBtn.addEventListener("click", async () => {
-  if (!firebaseState || !window.confirm("Vil du rydde alle svar og vindere i Firebase?")) {
-    return;
-  }
-
-  clearBtn.disabled = true;
-  showStatus(saveStatusEl, "Rydder...");
-
-  try {
-    await clearAll();
-    showStatus(saveStatusEl, "Alt er ryddet");
-  } catch (error) {
-    showStatus(saveStatusEl, `Kunne ikke rydde: ${error.message}`, { persistent: true });
-  } finally {
-    clearBtn.disabled = false;
-  }
-});
-
-shareBtn.addEventListener("click", shareLink);
-startBtn.addEventListener("click", showQuiz);
-window.addEventListener("load", () => {
-  setupQrCode();
-  initFirebase();
-});
+window.addEventListener("load", initFirebase);

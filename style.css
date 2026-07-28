@@ -31,6 +31,10 @@ body {
   padding: 1.2rem 1rem 3rem;
 }
 
+.answer-page {
+  max-width: 760px;
+}
+
 .hero {
   text-align: center;
   margin-bottom: 1rem;
@@ -72,6 +76,10 @@ h3 {
 
 .panel {
   margin-bottom: 1rem;
+}
+
+.answer-panel {
+  margin-bottom: 0;
 }
 
 .start-screen {

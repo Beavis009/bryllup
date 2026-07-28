@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="da">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Svar på bryllupsquiz</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="page answer-page">
+      <section class="hero">
+        <p class="eyebrow">Bryllupsquiz</p>
+        <h1>Svar på spørgsmålene</h1>
+        <p>Skriv dit navn, svar på alle 12 spørgsmål og gem dine svar.</p>
+      </section>
+
+      <section class="panel answer-panel">
+        <form id="quiz-form">
+          <label>
+            <span>Navn</span>
+            <input id="name" name="name" type="text" placeholder="Skriv dit navn" maxlength="80" required />
+          </label>
+
+          <div id="question-fields" class="question-fields"></div>
+
+          <button type="submit">Gem svar</button>
+          <p id="save-status" class="status-text" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
