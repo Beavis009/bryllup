@@ -12,14 +12,24 @@ const shareBtn = document.getElementById("share-link");
 const statusEl = document.getElementById("share-status");
 const activationGrid = document.getElementById("question-activation");
 const activeQuestionStatusEl = document.getElementById("active-question-status");
+const activeQuestionLabelEl = document.getElementById("active-question-label");
+const activeQuestionTitleEl = document.getElementById("active-question-title");
+const activeAnswerCountEl = document.getElementById("active-answer-count");
+const activeAnswerListEl = document.getElementById("active-answer-list");
+const participantCountEl = document.getElementById("participant-count");
+const participantsListEl = document.getElementById("participants-list");
 const firebaseConfig = window.firebaseConfig || {};
 const firebaseSettings = {
   questionsPath: "questions",
   activeQuestionPath: "activeQuestion",
+  participantsPath: "participants",
+  submissionsPath: "submissions",
   ...(window.firebaseSettings || {})
 };
 
 let questionsCache = [...FALLBACK_QUESTIONS];
+let participantsCache = [];
+let submissionsCache = [];
 let activeQuestionId = "q1";
 let firebaseState = null;
 
@@ -35,6 +45,35 @@ function getGuestEntryUrl() {
   url.search = "";
   url.hash = "";
   return url.toString();
+}
+
+function getTimeValue(item) {
+  if (typeof item.createdAt === "number") {
+    return item.createdAt;
+  }
+
+  if (typeof item.createdAtClient === "string") {
+    const parsed = Date.parse(item.createdAtClient);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  return 0;
+}
+
+function formatClock(item) {
+  const timeValue = getTimeValue(item);
+  if (!timeValue) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("da-DK", {
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(timeValue));
+}
+
+function formatAnswerCount(count) {
+  return count === 1 ? "1 svar" : `${count} svar`;
 }
 
 function sortQuestions(questions) {
@@ -70,6 +109,59 @@ function normalizeActiveQuestion(data = {}) {
   return /^q([1-9]|1[0-2])$/.test(questionId) ? questionId : "q1";
 }
 
+function normalizeParticipant(id, data = {}) {
+  const name = typeof data.name === "string" ? data.name.trim() : "";
+
+  if (!name) {
+    return null;
+  }
+
+  return {
+    id,
+    name,
+    createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
+    createdAtClient: typeof data.createdAtClient === "string" ? data.createdAtClient : ""
+  };
+}
+
+function normalizeParticipants(data = {}) {
+  return Object.entries(data)
+    .map(([id, participant]) => normalizeParticipant(id, participant))
+    .filter(Boolean)
+    .sort((a, b) => getTimeValue(b) - getTimeValue(a));
+}
+
+function normalizeSubmission(id, data = {}) {
+  const questionId = typeof data.questionId === "string" ? data.questionId : "";
+  const answer = typeof data.answer === "string" ? data.answer.trim() : "";
+  const name = typeof data.name === "string" && data.name.trim() ? data.name.trim() : "Ukendt";
+
+  if (!/^q([1-9]|1[0-2])$/.test(questionId) || !answer) {
+    return null;
+  }
+
+  return {
+    id,
+    questionId,
+    answer,
+    name,
+    participantId: typeof data.participantId === "string" ? data.participantId : "",
+    createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
+    createdAtClient: typeof data.createdAtClient === "string" ? data.createdAtClient : ""
+  };
+}
+
+function normalizeSubmissions(data = {}) {
+  return Object.entries(data)
+    .map(([id, submission]) => normalizeSubmission(id, submission))
+    .filter(Boolean)
+    .sort((a, b) => getTimeValue(b) - getTimeValue(a));
+}
+
+function getActiveQuestion() {
+  return questionsCache.find((question) => question.id === activeQuestionId) || questionsCache[0];
+}
+
 function showShareStatus(message) {
   statusEl.textContent = message;
   window.setTimeout(() => {
@@ -91,14 +183,97 @@ function renderActivationControls() {
     button.type = "button";
     button.className = question.id === activeQuestionId ? "activation-button active" : "activation-button";
     button.dataset.questionId = question.id;
-    button.textContent = question.text;
+    button.textContent = question.order;
+    button.title = question.text;
     button.disabled = !firebaseState;
     return button;
   });
 
   activationGrid.replaceChildren(...buttons);
-  const activeQuestion = questionsCache.find((question) => question.id === activeQuestionId);
-  activeQuestionStatusEl.textContent = activeQuestion ? `Aktivt spørgsmål: ${activeQuestion.text}` : "Intet aktivt spørgsmål";
+  const activeQuestion = getActiveQuestion();
+  const questionIndex = questionsCache.findIndex((question) => question.id === activeQuestion.id);
+  activeQuestionStatusEl.textContent = activeQuestion
+    ? `Aktivt spørgsmål ${questionIndex + 1}`
+    : "Intet aktivt spørgsmål";
+}
+
+function renderActiveQuestionPanel() {
+  const activeQuestion = getActiveQuestion();
+
+  if (!activeQuestion) {
+    activeQuestionLabelEl.textContent = "Aktivt spørgsmål";
+    activeQuestionTitleEl.textContent = "-";
+    activeAnswerCountEl.textContent = "0 svar";
+    activeAnswerListEl.replaceChildren(createEmptyMessage("Intet aktivt spørgsmål."));
+    return;
+  }
+
+  const questionIndex = questionsCache.findIndex((question) => question.id === activeQuestion.id);
+  const activeSubmissions = submissionsCache.filter((submission) => submission.questionId === activeQuestion.id);
+
+  activeQuestionLabelEl.textContent = `Aktivt spørgsmål ${questionIndex + 1} af ${questionsCache.length}`;
+  activeQuestionTitleEl.textContent = activeQuestion.text;
+  activeAnswerCountEl.textContent = formatAnswerCount(activeSubmissions.length);
+
+  if (!activeSubmissions.length) {
+    activeAnswerListEl.replaceChildren(createEmptyMessage("Ingen svar på dette spørgsmål endnu."));
+    return;
+  }
+
+  activeAnswerListEl.replaceChildren(...activeSubmissions.map(createAnswerRow));
+}
+
+function createAnswerRow(submission) {
+  const row = document.createElement("article");
+  row.className = "answer-row live-answer-row";
+
+  const header = document.createElement("div");
+  header.className = "answer-row-header";
+
+  const name = document.createElement("strong");
+  name.textContent = submission.name;
+
+  const time = document.createElement("span");
+  time.textContent = formatClock(submission);
+
+  const answer = document.createElement("p");
+  answer.textContent = submission.answer;
+
+  header.append(name, time);
+  row.append(header, answer);
+  return row;
+}
+
+function renderParticipants() {
+  participantCountEl.textContent = String(participantsCache.length);
+
+  if (!participantsCache.length) {
+    participantsListEl.replaceChildren(createEmptyMessage("Ingen deltagere endnu."));
+    return;
+  }
+
+  participantsListEl.replaceChildren(...participantsCache.map(createParticipantRow));
+}
+
+function createParticipantRow(participant) {
+  const row = document.createElement("article");
+  row.className = "participant-row";
+
+  const name = document.createElement("strong");
+  name.textContent = participant.name;
+
+  const time = document.createElement("span");
+  time.textContent = formatClock(participant) || "Registreret";
+
+  row.append(name, time);
+  return row;
+}
+
+function createEmptyMessage(message) {
+  const empty = document.createElement("p");
+  empty.className = "empty";
+  empty.textContent = message;
+  return empty;
 }
 
 function shareLink() {
@@ -153,6 +328,8 @@ async function activateQuestion(questionId) {
 
 async function initFirebase() {
   renderActivationControls();
+  renderActiveQuestionPanel();
+  renderParticipants();
 
   if (!hasFirebaseConfig(firebaseConfig)) {
     activeQuestionStatusEl.textContent = "Indsæt Firebase config i firebase-config.js.";
@@ -168,6 +345,8 @@ async function initFirebase() {
     const db = database.getDatabase(app);
     const questionsRef = database.ref(db, firebaseSettings.questionsPath);
     const activeQuestionRef = database.ref(db, firebaseSettings.activeQuestionPath);
+    const participantsRef = database.ref(db, firebaseSettings.participantsPath);
+    const submissionsRef = database.ref(db, firebaseSettings.submissionsPath);
 
     firebaseState = {
       activeQuestionRef,
@@ -176,15 +355,51 @@ async function initFirebase() {
       set: database.set
     };
 
-    firebaseState.onValue(questionsRef, (snapshot) => {
-      questionsCache = normalizeQuestions(snapshot.val() || {});
-      renderActivationControls();
-    });
+    firebaseState.onValue(
+      questionsRef,
+      (snapshot) => {
+        questionsCache = normalizeQuestions(snapshot.val() || {});
+        renderActivationControls();
+        renderActiveQuestionPanel();
+      },
+      (error) => {
+        activeQuestionStatusEl.textContent = `Firebase-fejl: ${error.message}`;
+      }
+    );
 
-    firebaseState.onValue(activeQuestionRef, (snapshot) => {
-      activeQuestionId = normalizeActiveQuestion(snapshot.val() || {});
-      renderActivationControls();
-    });
+    firebaseState.onValue(
+      activeQuestionRef,
+      (snapshot) => {
+        activeQuestionId = normalizeActiveQuestion(snapshot.val() || {});
+        renderActivationControls();
+        renderActiveQuestionPanel();
+      },
+      (error) => {
+        activeQuestionStatusEl.textContent = `Firebase-fejl: ${error.message}`;
+      }
+    );
+
+    firebaseState.onValue(
+      participantsRef,
+      (snapshot) => {
+        participantsCache = normalizeParticipants(snapshot.val() || {});
+        renderParticipants();
+      },
+      (error) => {
+        participantsListEl.replaceChildren(createEmptyMessage(`Firebase-fejl: ${error.message}`));
+      }
+    );
+
+    firebaseState.onValue(
+      submissionsRef,
+      (snapshot) => {
+        submissionsCache = normalizeSubmissions(snapshot.val() || {});
+        renderActiveQuestionPanel();
+      },
+      (error) => {
+        activeAnswerListEl.replaceChildren(createEmptyMessage(`Firebase-fejl: ${error.message}`));
+      }
+    );
   } catch (error) {
     activeQuestionStatusEl.textContent = `Kunne ikke starte Firebase: ${error.message}`;
   }

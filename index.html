@@ -8,37 +8,71 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <main class="page">
-      <section class="hero">
-        <p class="eyebrow">Bryllupsquiz</p>
-        <h1>Scan og svar</h1>
-        <p>QR-koden sender gæsterne til svar-siden, hvor de kun ser det aktive spørgsmål.</p>
-      </section>
+    <main class="page home-page">
+      <header class="dashboard-topbar">
+        <div>
+          <p class="eyebrow">Bryllupsquiz</p>
+          <h1>Quiz dashboard</h1>
+        </div>
+        <p id="active-question-status" class="status-pill">Forbinder til Firebase...</p>
+      </header>
 
-      <section id="start-screen" class="panel start-screen">
-        <div class="start-copy">
-          <strong>Til gæsterne</strong>
-          <p>Scan QR-koden med telefonen for at åbne svar-siden.</p>
-        </div>
-        <div class="qr-box large">
-          <img id="qr-code" alt="QR-kode til svar-siden" />
-        </div>
-        <div class="start-actions">
-          <button id="start-quiz" type="button">Gå til svar-siden</button>
-          <button id="share-link" type="button" class="secondary">Del link</button>
-        </div>
-        <p id="share-status" class="status-text"></p>
-      </section>
+      <div class="dashboard-layout">
+        <section class="dashboard-main">
+          <section class="panel question-strip-panel">
+            <div class="board-header">
+              <div>
+                <h2>Spørgsmål</h2>
+                <p class="muted-text">Vælg det aktive spørgsmål</p>
+              </div>
+            </div>
+            <div id="question-activation" class="activation-grid question-rail"></div>
+          </section>
 
-      <section class="panel control-panel">
-        <div class="board-header">
-          <div>
-            <h2>Aktivér spørgsmål</h2>
-            <p id="active-question-status" class="muted-text">Forbinder til Firebase...</p>
-          </div>
-        </div>
-        <div id="question-activation" class="activation-grid"></div>
-      </section>
+          <section class="panel live-panel">
+            <div class="board-header">
+              <div>
+                <span id="active-question-label" class="question-number">Aktivt spørgsmål</span>
+                <h2 id="active-question-title">-</h2>
+              </div>
+              <span id="active-answer-count" class="answer-count">0 svar</span>
+            </div>
+            <div id="active-answer-list" class="answer-list active-answer-list">
+              <p class="empty">Ingen svar endnu.</p>
+            </div>
+          </section>
+        </section>
+
+        <aside class="dashboard-sidebar">
+          <section id="start-screen" class="panel start-screen qr-panel">
+            <div class="start-copy">
+              <strong>Til gæsterne</strong>
+              <p>Scan QR-koden med telefonen.</p>
+            </div>
+            <div class="qr-box large">
+              <img id="qr-code" alt="QR-kode til svar-siden" />
+            </div>
+            <div class="start-actions">
+              <button id="start-quiz" type="button">Gå til svar</button>
+              <button id="share-link" type="button" class="secondary">Del link</button>
+            </div>
+            <p id="share-status" class="status-text"></p>
+          </section>
+
+          <section class="panel participants-panel">
+            <div class="board-header">
+              <div>
+                <h2>Deltagere</h2>
+                <p class="muted-text">Navne gemt fra QR-flowet</p>
+              </div>
+              <span id="participant-count" class="answer-count">0</span>
+            </div>
+            <div id="participants-list" class="participant-list">
+              <p class="empty">Ingen deltagere endnu.</p>
+            </div>
+          </section>
+        </aside>
+      </div>
     </main>
 
     <script src="firebase-config.js"></script>
