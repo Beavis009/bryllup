@@ -104,7 +104,6 @@ const activationGrid = document.getElementById("question-activation");
 const questionTypeControls = document.getElementById("question-type-controls");
 const questionTypeStatusEl = document.getElementById("question-type-status");
 const activeQuestionStatusEl = document.getElementById("active-question-status");
-const activeQuestionLabelEl = document.getElementById("active-question-label");
 const activeQuestionTitleEl = document.getElementById("active-question-title");
 const activeQuestionVideoEl = document.getElementById("active-question-video");
 const activeAnswerCountEl = document.getElementById("active-answer-count");
@@ -629,7 +628,6 @@ function renderActiveQuestionPanel() {
   const activeQuestion = getActiveQuestion();
 
   if (!activeQuestion) {
-    activeQuestionLabelEl.textContent = "Aktivt spÃ¸rgsmÃ¥l";
     activeQuestionTitleEl.textContent = "-";
     renderActiveQuestionVideo(null);
     activeAnswerCountEl.textContent = "0 svar";
@@ -640,12 +638,6 @@ function renderActiveQuestionPanel() {
 
   const activeAnswers = getDisplayAnswersForQuestion(activeQuestion.id);
 
-  activeQuestionLabelEl.textContent = [
-    `Aktivt spÃ¸rgsmÃ¥l ${activeQuestion.order}`,
-    activeQuestion.category
-  ]
-    .filter(Boolean)
-    .join(" Â· ");
   activeQuestionTitleEl.textContent = activeQuestion.text;
   renderActiveQuestionVideo(activeQuestion);
   activeAnswerCountEl.textContent = formatAnswerCount(activeAnswers.length);
