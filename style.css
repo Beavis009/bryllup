@@ -359,31 +359,31 @@ h3 {
 }
 
 .rules-dialog {
-  width: min(100%, 720px);
-  gap: 1.2rem;
-  padding: 1.35rem;
+  width: min(100%, 920px);
+  gap: 1.7rem;
+  padding: 2rem;
 }
 
 .rules-dialog .video-dialog-header h2 {
-  font-size: 1.75rem;
+  font-size: 2.45rem;
 }
 
 .rules-body {
   display: grid;
-  gap: 1.15rem;
+  gap: 1.6rem;
 }
 
 .rules-list {
   display: grid;
-  gap: 0.9rem;
+  gap: 1.25rem;
   margin: 0;
-  padding-left: 1.6rem;
+  padding-left: 2rem;
 }
 
 .rules-list li {
   color: var(--text);
-  font-size: 1.2rem;
-  line-height: 1.48;
+  font-size: 1.65rem;
+  line-height: 1.42;
 }
 
 .rules-list li::marker {
@@ -393,7 +393,7 @@ h3 {
 
 .rules-note {
   color: var(--muted);
-  font-size: 1.05rem;
+  font-size: 1.35rem;
   margin-bottom: 0;
 }
 
@@ -923,6 +923,22 @@ button.secondary,
 
   .live-panel h2 {
     font-size: 1.75rem;
+  }
+
+  .rules-dialog {
+    padding: 1.25rem;
+  }
+
+  .rules-dialog .video-dialog-header h2 {
+    font-size: 1.85rem;
+  }
+
+  .rules-list li {
+    font-size: 1.15rem;
+  }
+
+  .rules-note {
+    font-size: 1rem;
   }
 }
 
