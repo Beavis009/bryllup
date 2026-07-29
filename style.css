@@ -911,6 +911,15 @@ button.secondary,
   padding: 0.7rem 0.75rem;
 }
 
+.participant-row.has-answered-active {
+  background: rgba(52, 211, 153, 0.16);
+  border-color: rgba(52, 211, 153, 0.62);
+}
+
+.participant-row.has-answered-active span {
+  color: #bbf7d0;
+}
+
 .participant-row strong {
   overflow-wrap: anywhere;
 }

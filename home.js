@@ -460,6 +460,14 @@ function getDisplayAnswersForQuestion(questionId) {
   return [...canonicalAnswers, ...legacyAnswers].sort((a, b) => getTimeValue(b) - getTimeValue(a));
 }
 
+function getAnsweredParticipantIdsForQuestion(questionId) {
+  return new Set(
+    getDisplayAnswersForQuestion(questionId)
+      .map((answer) => answer.participantId)
+      .filter(Boolean)
+  );
+}
+
 function getWinnerParticipantIds(exceptQuestionId = "") {
   return new Set(
     Object.values(winnersCache)
@@ -985,12 +993,15 @@ function renderParticipants() {
     return;
   }
 
-  participantsListEl.replaceChildren(...participantsCache.map(createParticipantRow));
+  const answeredParticipantIds = getAnsweredParticipantIdsForQuestion(activeQuestionId);
+  participantsListEl.replaceChildren(
+    ...participantsCache.map((participant) => createParticipantRow(participant, answeredParticipantIds.has(participant.id)))
+  );
 }
 
-function createParticipantRow(participant) {
+function createParticipantRow(participant, hasAnsweredActiveQuestion = false) {
   const row = document.createElement("article");
-  row.className = "participant-row";
+  row.className = hasAnsweredActiveQuestion ? "participant-row has-answered-active" : "participant-row";
 
   const name = document.createElement("strong");
   name.textContent = participant.name;
@@ -1259,6 +1270,7 @@ async function initFirebase() {
         activeQuestionId = normalizeActiveQuestion(snapshot.val() || {});
         renderActivationControls();
         renderActiveQuestionPanel();
+        renderParticipants();
       },
       (error) => {
         showQuestionTypeStatus(`Firebase-fejl: ${error.message}`);
@@ -1281,6 +1293,7 @@ async function initFirebase() {
       (snapshot) => {
         answersCache = normalizeAnswers(snapshot.val() || {});
         renderActiveQuestionPanel();
+        renderParticipants();
       },
       (error) => {
         activeAnswerListEl.replaceChildren(createEmptyMessage(`Firebase-fejl: ${error.message}`));
@@ -1292,6 +1305,7 @@ async function initFirebase() {
       (snapshot) => {
         legacySubmissionsCache = normalizeSubmissions(snapshot.val() || {});
         renderActiveQuestionPanel();
+        renderParticipants();
       },
       (error) => {
         activeAnswerListEl.replaceChildren(createEmptyMessage(`Firebase-fejl: ${error.message}`));
