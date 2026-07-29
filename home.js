@@ -5,21 +5,21 @@ const FALLBACK_QUESTIONS = [
   {
     id: "q0",
     order: 0,
-    category: "TestspÃ¸rgsmÃ¥l",
-    text: 'Hvor mange gange siger Anna "GrÃ¸ndahl!" i lÃ¸bet af en helt almindelig uge?',
+    category: "Testspørgsmål",
+    text: 'Hvor mange gange siger Anna "Grøndahl!" i løbet af en helt almindelig uge?',
     type: "number"
   },
   {
     id: "q1",
     order: 1,
     category: "Samarbejdsopgave",
-    text: "Hvor lang tid tager det Kasper at lave en Old Fashioned, nÃ¥r Anna lÃ¦ser opskriften hÃ¸jt for ham?",
+    text: "Hvor lang tid tager det Kasper at lave en Old Fashioned, når Anna læser opskriften højt for ham?",
     type: "time"
   },
   {
     id: "q2",
     order: 2,
-    category: "SpÃ¸rgsmÃ¥l",
+    category: "Spørgsmål",
     text: "Hvilket husnummer bor Anna og Kasper i?",
     type: "number"
   },
@@ -27,35 +27,35 @@ const FALLBACK_QUESTIONS = [
     id: "q3",
     order: 3,
     category: "Kasper opgave",
-    text: "Hvor mange vingummibamser kan Kasper flytte fra Ã©n skÃ¥l til en anden pÃ¥ 30 sekunder?",
+    text: "Hvor mange vingummibamser kan Kasper flytte fra én skål til en anden på 30 sekunder?",
     type: "number"
   },
   {
     id: "q4",
     order: 4,
     category: "Anna video",
-    text: "Hvor mange Disney-karakterer kan Anna nÃ¦vne pÃ¥ 30 sekunder?",
+    text: "Hvor mange Disney-karakterer kan Anna nævne på 30 sekunder?",
     type: "number"
   },
   {
     id: "q5",
     order: 5,
     category: "Anna opgave",
-    text: "Hvor mange Disney-citater kan Anna gÃ¦tte pÃ¥ 30 sekunder?",
+    text: "Hvor mange Disney-citater kan Anna gætte på 30 sekunder?",
     type: "number"
   },
   {
     id: "q6",
     order: 6,
     category: "Kasper video",
-    text: "Hvor lÃ¦nge kan Kasper blive stÃ¥ende pÃ¥ et surfbrÃ¦t pÃ¥ en kunstig bÃ¸lge?",
+    text: "Hvor længe kan Kasper blive stående på et surfbræt på en kunstig bølge?",
     type: "time"
   },
   {
     id: "q7",
     order: 7,
-    category: "SpÃ¸rgsmÃ¥l",
-    text: "Hvor mange dÃ¦kskift er der blevet lavet hos LykkegÃ¥rdens Auto i 2026?",
+    category: "Spørgsmål",
+    text: "Hvor mange dækskift er der blevet lavet hos Lykkegårdens Auto i 2026?",
     type: "number"
   },
   {
@@ -69,28 +69,28 @@ const FALLBACK_QUESTIONS = [
     id: "q9",
     order: 9,
     category: "Anna video",
-    text: "Hvor mange balloner kan Anna puste op pÃ¥ 30 sekunder?",
+    text: "Hvor mange balloner kan Anna puste op på 30 sekunder?",
     type: "number"
   },
   {
     id: "q10",
     order: 10,
     category: "Anna opgave",
-    text: "Hvor lang tid tager det Anna at lÃ¦gge et puslespil med 8 brikker?",
+    text: "Hvor lang tid tager det Anna at lægge et puslespil med 8 brikker?",
     type: "time"
   },
   {
     id: "q11",
     order: 11,
     category: "Kasper video",
-    text: "Hvor lang tid tager det Kasper at slÃ¥ 5 sÃ¸m i?",
+    text: "Hvor lang tid tager det Kasper at slå 5 søm i?",
     type: "time"
   },
   {
     id: "q12",
     order: 12,
     category: "Samarbejdsopgave",
-    text: "Hvor lang tid tager det Anna og Kasper at skifte betrÃ¦k pÃ¥ en dyne og en pude?",
+    text: "Hvor lang tid tager det Anna og Kasper at skifte betræk på en dyne og en pude?",
     type: "time"
   }
 ];
@@ -548,7 +548,7 @@ function formatDistance(questionType, distance) {
   }
 
   if (distance === 0) {
-    return "Ramte prÃ¦cist";
+    return "Ramte præcist";
   }
 
   return normalizeQuestionType(questionType) === "time" ? `Afvigelse: ${distance} sek.` : `Afvigelse: ${distance}`;
@@ -627,7 +627,7 @@ function renderActiveQuestionPanel() {
     activeQuestionTitleEl.textContent = "-";
     renderActiveQuestionVideo(null);
     activeAnswerCountEl.textContent = "0 svar";
-    activeAnswerListEl.replaceChildren(createEmptyMessage("Intet aktivt spÃ¸rgsmÃ¥l."));
+    activeAnswerListEl.replaceChildren(createEmptyMessage("Intet aktivt spørgsmål."));
     renderWinnerPanel(null, []);
     return;
   }
@@ -639,7 +639,7 @@ function renderActiveQuestionPanel() {
   activeAnswerCountEl.textContent = formatAnswerCount(activeAnswers.length);
 
   if (!activeAnswers.length) {
-    activeAnswerListEl.replaceChildren(createEmptyMessage("Ingen svar pÃ¥ dette spÃ¸rgsmÃ¥l endnu."));
+    activeAnswerListEl.replaceChildren(createEmptyMessage("Ingen svar på dette spørgsmål endnu."));
     renderWinnerPanel(activeQuestion, activeAnswers);
     return;
   }
@@ -694,7 +694,7 @@ function createAnswerRow(submission) {
 function renderWinnerPanel(activeQuestion, activeAnswers) {
   if (!activeQuestion) {
     winnerFormEl.hidden = true;
-    winnerCurrentEl.replaceChildren(createEmptyMessage("Intet aktivt spÃ¸rgsmÃ¥l."));
+    winnerCurrentEl.replaceChildren(createEmptyMessage("Intet aktivt spørgsmål."));
     return;
   }
 
@@ -730,7 +730,7 @@ function createWinnerBlock(winner, question) {
   block.className = "winner-block winner-announcement has-winner";
 
   const label = document.createElement("span");
-  label.textContent = `SpÃ¸rgsmÃ¥l ${question.order} Â· annonceret vinder`;
+  label.textContent = `Spørgsmål ${question.order} · annonceret vinder`;
 
   const name = document.createElement("strong");
   name.textContent = winner.winnerName;
@@ -757,7 +757,7 @@ function createWinnerBlock(winner, question) {
   }
 
   const meta = document.createElement("p");
-  meta.textContent = metaParts.join(" Â· ");
+  meta.textContent = metaParts.join(" · ");
   if (answeredAtTitle) {
     meta.title = answeredAtTitle;
   }
@@ -906,7 +906,7 @@ function shareLink() {
     navigator
       .share({
         title: "Bryllupsquiz",
-        text: "Svar pÃ¥ bryllupsquizzen",
+        text: "Svar på bryllupsquizzen",
         url
       })
       .then(() => showShareStatus("Link delt"))
@@ -915,7 +915,7 @@ function shareLink() {
   }
 
   if (!navigator.clipboard) {
-    showShareStatus("KopiÃ©r linket fra adresselinjen");
+    showShareStatus("Kopiér linket fra adresselinjen");
     return;
   }
 
@@ -1033,7 +1033,7 @@ async function saveWinner(event) {
   try {
     const { getWinnerRef, set } = firebaseState;
     await set(getWinnerRef(activeQuestion.id), buildWinnerPayload(activeQuestion, candidate, correctAnswerValue));
-    showWinnerStatus(`Vinder annonceret for spÃ¸rgsmÃ¥l ${activeQuestion.order}: ${candidate.name}.`);
+    showWinnerStatus(`Vinder annonceret for spørgsmål ${activeQuestion.order}: ${candidate.name}.`);
   } catch (error) {
     showWinnerStatus(`Kunne ikke gemme vinder: ${error.message}`, { persistent: true });
   } finally {
