@@ -20,8 +20,8 @@ window.firebaseSettings = {
 };
 
 window.staticQuestionVideos = {
-  q4: {
-    src: "videos/q4-test.mp4",
+  q6: {
+    src: "videos/q6-test.mp4",
     label: "Testvideo"
   }
 };
