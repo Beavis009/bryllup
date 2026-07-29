@@ -103,7 +103,6 @@ const statusEl = document.getElementById("share-status");
 const activationGrid = document.getElementById("question-activation");
 const questionTypeControls = document.getElementById("question-type-controls");
 const questionTypeStatusEl = document.getElementById("question-type-status");
-const activeQuestionStatusEl = document.getElementById("active-question-status");
 const activeQuestionTitleEl = document.getElementById("active-question-title");
 const activeQuestionVideoEl = document.getElementById("active-question-video");
 const activeAnswerCountEl = document.getElementById("active-answer-count");
@@ -599,9 +598,6 @@ function renderActivationControls() {
 
   activationGrid.replaceChildren(...controls);
   const activeQuestion = getActiveQuestion();
-  activeQuestionStatusEl.textContent = activeQuestion
-    ? `Aktivt spÃ¸rgsmÃ¥l ${activeQuestion.order}`
-    : "Intet aktivt spÃ¸rgsmÃ¥l";
   renderQuestionTypeControls();
 }
 
@@ -939,7 +935,7 @@ async function activateQuestion(questionId) {
     return;
   }
 
-  activeQuestionStatusEl.textContent = "Aktiverer...";
+  showQuestionTypeStatus("Aktiverer...");
 
   try {
     const { activeQuestionRef, serverTimestamp, set } = firebaseState;
@@ -949,7 +945,7 @@ async function activateQuestion(questionId) {
       activatedAtClient: new Date().toISOString()
     });
   } catch (error) {
-    activeQuestionStatusEl.textContent = `Kunne ikke aktivere: ${error.message}`;
+    showQuestionTypeStatus(`Kunne ikke aktivere: ${error.message}`);
   }
 }
 
@@ -1052,7 +1048,7 @@ async function initFirebase() {
   renderQuestionTypeControls();
 
   if (!hasFirebaseConfig(firebaseConfig)) {
-    activeQuestionStatusEl.textContent = "IndsÃ¦t Firebase config i firebase-config.js.";
+    showQuestionTypeStatus("Indsæt Firebase config i firebase-config.js.");
     return;
   }
 
@@ -1086,7 +1082,7 @@ async function initFirebase() {
         renderActiveQuestionPanel();
       },
       (error) => {
-        activeQuestionStatusEl.textContent = `Firebase-fejl: ${error.message}`;
+        showQuestionTypeStatus(`Firebase-fejl: ${error.message}`);
       }
     );
 
@@ -1098,7 +1094,7 @@ async function initFirebase() {
         renderActiveQuestionPanel();
       },
       (error) => {
-        activeQuestionStatusEl.textContent = `Firebase-fejl: ${error.message}`;
+        showQuestionTypeStatus(`Firebase-fejl: ${error.message}`);
       }
     );
 
@@ -1147,7 +1143,7 @@ async function initFirebase() {
     );
 
   } catch (error) {
-    activeQuestionStatusEl.textContent = `Kunne ikke starte Firebase: ${error.message}`;
+    showQuestionTypeStatus(`Kunne ikke starte Firebase: ${error.message}`);
   }
 }
 

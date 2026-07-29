@@ -54,16 +54,6 @@ body.modal-open {
   line-height: 1.05;
 }
 
-.status-pill {
-  color: var(--accent);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: rgba(246, 196, 83, 0.08);
-  padding: 0.45rem 0.75rem;
-  margin: 0;
-  white-space: nowrap;
-}
-
 .dashboard-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
@@ -847,11 +837,6 @@ button.secondary,
 
   .dashboard-layout {
     grid-template-columns: 1fr;
-  }
-
-  .status-pill {
-    width: fit-content;
-    white-space: normal;
   }
 
   .question-rail {
