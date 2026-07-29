@@ -106,6 +106,7 @@ const questionTypeStatusEl = document.getElementById("question-type-status");
 const activeQuestionStatusEl = document.getElementById("active-question-status");
 const activeQuestionLabelEl = document.getElementById("active-question-label");
 const activeQuestionTitleEl = document.getElementById("active-question-title");
+const activeQuestionVideoEl = document.getElementById("active-question-video");
 const activeAnswerCountEl = document.getElementById("active-answer-count");
 const activeAnswerListEl = document.getElementById("active-answer-list");
 const winnerCurrentEl = document.getElementById("winner-current");
@@ -594,16 +595,6 @@ function renderActivationControls() {
     button.append(number);
     cell.append(button);
 
-    if (getQuestionVideo(question.id)) {
-      const videoButton = document.createElement("button");
-      videoButton.type = "button";
-      videoButton.className = "question-video-button";
-      videoButton.dataset.videoQuestionId = question.id;
-      videoButton.title = `Afspil video til spm. ${question.order}`;
-      videoButton.setAttribute("aria-label", `Afspil video til spm. ${question.order}`);
-      cell.append(videoButton);
-    }
-
     return cell;
   });
 
@@ -615,12 +606,32 @@ function renderActivationControls() {
   renderQuestionTypeControls();
 }
 
+function renderActiveQuestionVideo(question) {
+  const videoState = question ? getQuestionVideo(question.id) : null;
+
+  if (!question || !videoState) {
+    activeQuestionVideoEl.hidden = true;
+    activeQuestionVideoEl.replaceChildren();
+    return;
+  }
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "active-question-video-button";
+  button.dataset.activeVideoQuestionId = question.id;
+  button.textContent = videoState.label || "Afspil video";
+
+  activeQuestionVideoEl.hidden = false;
+  activeQuestionVideoEl.replaceChildren(button);
+}
+
 function renderActiveQuestionPanel() {
   const activeQuestion = getActiveQuestion();
 
   if (!activeQuestion) {
     activeQuestionLabelEl.textContent = "Aktivt spÃ¸rgsmÃ¥l";
     activeQuestionTitleEl.textContent = "-";
+    renderActiveQuestionVideo(null);
     activeAnswerCountEl.textContent = "0 svar";
     activeAnswerListEl.replaceChildren(createEmptyMessage("Intet aktivt spÃ¸rgsmÃ¥l."));
     renderWinnerPanel(null, []);
@@ -636,6 +647,7 @@ function renderActiveQuestionPanel() {
     .filter(Boolean)
     .join(" Â· ");
   activeQuestionTitleEl.textContent = activeQuestion.text;
+  renderActiveQuestionVideo(activeQuestion);
   activeAnswerCountEl.textContent = formatAnswerCount(activeAnswers.length);
 
   if (!activeAnswers.length) {
@@ -766,14 +778,46 @@ function createWinnerBlock(winner, question) {
   return block;
 }
 
-function createQuestionVideoElement(videoState) {
+function createQuestionVideoPlayer(videoState) {
+  const player = document.createElement("div");
+  player.className = "custom-video-player";
+
   const video = document.createElement("video");
   video.src = videoState.src;
-  video.controls = true;
   video.playsInline = true;
   video.preload = "metadata";
   video.autoplay = true;
-  return video;
+
+  const controls = document.createElement("div");
+  controls.className = "custom-video-controls";
+
+  const playButton = document.createElement("button");
+  playButton.type = "button";
+  playButton.className = "custom-video-toggle";
+
+  function updatePlayButton() {
+    playButton.textContent = video.paused ? "Afspil" : "Pause";
+  }
+
+  function togglePlayback() {
+    if (video.paused) {
+      video.play().catch(() => {});
+      return;
+    }
+
+    video.pause();
+  }
+
+  playButton.addEventListener("click", togglePlayback);
+  video.addEventListener("click", togglePlayback);
+  video.addEventListener("play", updatePlayButton);
+  video.addEventListener("pause", updatePlayButton);
+  video.addEventListener("ended", updatePlayButton);
+  updatePlayButton();
+
+  controls.append(playButton);
+  player.append(video, controls);
+  return { player, video };
 }
 
 function openQuestionVideo(questionId) {
@@ -786,7 +830,7 @@ function openQuestionVideo(questionId) {
 
   closeQrModal();
 
-  const video = createQuestionVideoElement(videoState);
+  const { player, video } = createQuestionVideoPlayer(videoState);
   openVideoQuestionId = questionId;
   videoModalLabelEl.textContent = [
     `Spm. ${question.order}`,
@@ -796,7 +840,7 @@ function openQuestionVideo(questionId) {
     .filter(Boolean)
     .join(" - ");
   videoModalTitleEl.textContent = question.text;
-  videoModalBodyEl.replaceChildren(video);
+  videoModalBodyEl.replaceChildren(player);
   videoModalEl.hidden = false;
   document.body.classList.add("modal-open");
 
@@ -1121,15 +1165,15 @@ startBtn.addEventListener("click", () => {
 qrOpenBtn.addEventListener("click", openQrModal);
 shareBtn.addEventListener("click", shareLink);
 activationGrid.addEventListener("click", (event) => {
-  const videoButton = event.target.closest("[data-video-question-id]");
-  if (videoButton) {
-    openQuestionVideo(videoButton.dataset.videoQuestionId);
-    return;
-  }
-
   const button = event.target.closest("[data-question-id]");
   if (button) {
     activateQuestion(button.dataset.questionId);
+  }
+});
+activeQuestionVideoEl.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-active-video-question-id]");
+  if (button) {
+    openQuestionVideo(button.dataset.activeVideoQuestionId);
   }
 });
 questionTypeControls.addEventListener("click", (event) => {
