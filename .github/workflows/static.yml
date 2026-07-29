@@ -25,7 +25,7 @@ jobs:
         run: |
           mkdir -p dist
           cp index.html answer.html join.html dist/
-          cp style.css home.js script.js join.js firebase-config.js dist/
+          cp style.css home.js script.js join.js rules.js firebase-config.js dist/
           if [ -d videos ]; then cp -R videos dist/; fi
 
       - name: Setup Pages
