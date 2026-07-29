@@ -5,7 +5,6 @@ window.firebaseConfig = {
   authDomain: "bryllup-7f66a.firebaseapp.com",
   databaseURL: "https://bryllup-7f66a-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "bryllup-7f66a",
-  storageBucket: "bryllup-7f66a.firebasestorage.app",
   messagingSenderId: "386198944236",
   appId: "1:386198944236:web:e620399530584f6d0268c9"
 };
@@ -17,7 +16,12 @@ window.firebaseSettings = {
   participantsPath: "participants",
   submissionsPath: "submissions",
   winnersPath: "winners",
-  questionVideosPath: "questionVideos",
-  videoStoragePath: "questionVideos",
   allowClientClear: false
+};
+
+window.staticQuestionVideos = {
+  q4: {
+    src: "videos/q4-test.mp4",
+    label: "Testvideo"
+  }
 };

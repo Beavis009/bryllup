@@ -1,25 +1,25 @@
-const FIREBASE_SDK_VERSION = "12.16.0";
+﻿const FIREBASE_SDK_VERSION = "12.16.0";
 const QUESTION_ID_PATTERN = /^q(0|[1-9]|1[0-2])$/;
 const QUESTION_TYPES = ["number", "time"];
 const FALLBACK_QUESTIONS = [
   {
     id: "q0",
     order: 0,
-    category: "Testspørgsmål",
-    text: 'Hvor mange gange siger Anna "Grøndahl!" i løbet af en helt almindelig uge?',
+    category: "TestspÃ¸rgsmÃ¥l",
+    text: 'Hvor mange gange siger Anna "GrÃ¸ndahl!" i lÃ¸bet af en helt almindelig uge?',
     type: "number"
   },
   {
     id: "q1",
     order: 1,
     category: "Samarbejdsopgave",
-    text: "Hvor lang tid tager det Kasper at lave en Old Fashioned, når Anna læser opskriften højt for ham?",
+    text: "Hvor lang tid tager det Kasper at lave en Old Fashioned, nÃ¥r Anna lÃ¦ser opskriften hÃ¸jt for ham?",
     type: "time"
   },
   {
     id: "q2",
     order: 2,
-    category: "Spørgsmål",
+    category: "SpÃ¸rgsmÃ¥l",
     text: "Hvilket husnummer bor Anna og Kasper i?",
     type: "number"
   },
@@ -27,35 +27,35 @@ const FALLBACK_QUESTIONS = [
     id: "q3",
     order: 3,
     category: "Kasper opgave",
-    text: "Hvor mange vingummibamser kan Kasper flytte fra én skål til en anden på 30 sekunder?",
+    text: "Hvor mange vingummibamser kan Kasper flytte fra Ã©n skÃ¥l til en anden pÃ¥ 30 sekunder?",
     type: "number"
   },
   {
     id: "q4",
     order: 4,
     category: "Anna video",
-    text: "Hvor mange Disney-karakterer kan Anna nævne på 30 sekunder?",
+    text: "Hvor mange Disney-karakterer kan Anna nÃ¦vne pÃ¥ 30 sekunder?",
     type: "number"
   },
   {
     id: "q5",
     order: 5,
     category: "Anna opgave",
-    text: "Hvor mange Disney-citater kan Anna gætte på 30 sekunder?",
+    text: "Hvor mange Disney-citater kan Anna gÃ¦tte pÃ¥ 30 sekunder?",
     type: "number"
   },
   {
     id: "q6",
     order: 6,
     category: "Kasper video",
-    text: "Hvor længe kan Kasper blive stående på et surfbræt på en kunstig bølge?",
+    text: "Hvor lÃ¦nge kan Kasper blive stÃ¥ende pÃ¥ et surfbrÃ¦t pÃ¥ en kunstig bÃ¸lge?",
     type: "time"
   },
   {
     id: "q7",
     order: 7,
-    category: "Spørgsmål",
-    text: "Hvor mange dækskift er der blevet lavet hos Lykkegårdens Auto i 2026?",
+    category: "SpÃ¸rgsmÃ¥l",
+    text: "Hvor mange dÃ¦kskift er der blevet lavet hos LykkegÃ¥rdens Auto i 2026?",
     type: "number"
   },
   {
@@ -69,28 +69,28 @@ const FALLBACK_QUESTIONS = [
     id: "q9",
     order: 9,
     category: "Anna video",
-    text: "Hvor mange balloner kan Anna puste op på 30 sekunder?",
+    text: "Hvor mange balloner kan Anna puste op pÃ¥ 30 sekunder?",
     type: "number"
   },
   {
     id: "q10",
     order: 10,
     category: "Anna opgave",
-    text: "Hvor lang tid tager det Anna at lægge et puslespil med 8 brikker?",
+    text: "Hvor lang tid tager det Anna at lÃ¦gge et puslespil med 8 brikker?",
     type: "time"
   },
   {
     id: "q11",
     order: 11,
     category: "Kasper video",
-    text: "Hvor lang tid tager det Kasper at slå 5 søm i?",
+    text: "Hvor lang tid tager det Kasper at slÃ¥ 5 sÃ¸m i?",
     type: "time"
   },
   {
     id: "q12",
     order: 12,
     category: "Samarbejdsopgave",
-    text: "Hvor lang tid tager det Anna og Kasper at skifte betræk på en dyne og en pude?",
+    text: "Hvor lang tid tager det Anna og Kasper at skifte betrÃ¦k pÃ¥ en dyne og en pude?",
     type: "time"
   }
 ];
@@ -132,16 +132,15 @@ const firebaseSettings = {
   participantsPath: "participants",
   submissionsPath: "submissions",
   winnersPath: "winners",
-  questionVideosPath: "questionVideos",
   ...(window.firebaseSettings || {})
 };
+const staticQuestionVideos = normalizeStaticQuestionVideos(window.staticQuestionVideos || {});
 
 let questionsCache = [...FALLBACK_QUESTIONS];
 let participantsCache = [];
 let answersCache = [];
 let legacySubmissionsCache = [];
 let winnersCache = {};
-let questionVideosCache = {};
 let activeQuestionId = "q1";
 let firebaseState = null;
 let winnerStatusTimer;
@@ -369,61 +368,37 @@ function normalizeWinners(data = {}) {
   );
 }
 
-function normalizeQuestionVideo(questionId, data = {}) {
-  if (!QUESTION_ID_PATTERN.test(questionId) || !data || typeof data !== "object") {
+function normalizeStaticQuestionVideo(questionId, data = {}) {
+  const videoData = typeof data === "string" ? { src: data } : data;
+
+  if (!QUESTION_ID_PATTERN.test(questionId) || !videoData || typeof videoData !== "object") {
     return null;
   }
 
-  const storedQuestionId = typeof data.questionId === "string" ? data.questionId : questionId;
-  const url = typeof data.url === "string" ? data.url.trim() : "";
-  const embedUrl = typeof data.embedUrl === "string" ? data.embedUrl.trim() : "";
-  const provider = typeof data.provider === "string" ? data.provider.trim() : "";
-  const storagePath = typeof data.storagePath === "string" ? data.storagePath.trim() : "";
-  const fileName = typeof data.fileName === "string" ? data.fileName.trim() : "";
-  const contentType = typeof data.contentType === "string" ? data.contentType.trim() : "";
-  const size = typeof data.size === "number" ? data.size : 0;
+  const src = typeof videoData.src === "string" ? videoData.src.trim() : "";
 
-  if (
-    storedQuestionId !== questionId ||
-    !url ||
-    !embedUrl ||
-    provider !== "file" ||
-    !storagePath ||
-    !fileName ||
-    !contentType.startsWith("video/")
-  ) {
+  if (!src) {
     return null;
   }
 
   return {
     questionId,
-    question: typeof data.question === "string" ? data.question : "",
-    questionCategory: typeof data.questionCategory === "string" ? data.questionCategory : "",
-    url,
-    embedUrl,
-    provider,
-    storagePath,
-    fileName,
-    contentType,
-    size,
-    visible: data.visible === true,
-    updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
-    updatedAtClient: typeof data.updatedAtClient === "string" ? data.updatedAtClient : ""
+    src,
+    label: typeof videoData.label === "string" ? videoData.label.trim() : ""
   };
 }
 
-function normalizeQuestionVideos(data = {}) {
+function normalizeStaticQuestionVideos(data = {}) {
   return Object.fromEntries(
     Object.entries(data)
-      .map(([questionId, video]) => normalizeQuestionVideo(questionId, video))
+      .map(([questionId, video]) => normalizeStaticQuestionVideo(questionId, video))
       .filter(Boolean)
       .map((video) => [video.questionId, video])
   );
 }
 
-function getPlayableQuestionVideo(questionId) {
-  const video = questionVideosCache[questionId];
-  return video?.visible === true ? video : null;
+function getQuestionVideo(questionId) {
+  return staticQuestionVideos[questionId] || null;
 }
 
 function getDisplayAnswersForQuestion(questionId) {
@@ -574,7 +549,7 @@ function formatDistance(questionType, distance) {
   }
 
   if (distance === 0) {
-    return "Ramte præcist";
+    return "Ramte prÃ¦cist";
   }
 
   return normalizeQuestionType(questionType) === "time" ? `Afvigelse: ${distance} sek.` : `Afvigelse: ${distance}`;
@@ -619,13 +594,13 @@ function renderActivationControls() {
     button.append(number);
     cell.append(button);
 
-    if (getPlayableQuestionVideo(question.id)) {
+    if (getQuestionVideo(question.id)) {
       const videoButton = document.createElement("button");
       videoButton.type = "button";
       videoButton.className = "question-video-button";
       videoButton.dataset.videoQuestionId = question.id;
-      videoButton.title = `Afspil video til spørgsmål ${question.order}`;
-      videoButton.setAttribute("aria-label", `Afspil video til spørgsmål ${question.order}`);
+      videoButton.title = `Afspil video til spm. ${question.order}`;
+      videoButton.setAttribute("aria-label", `Afspil video til spm. ${question.order}`);
       cell.append(videoButton);
     }
 
@@ -635,8 +610,8 @@ function renderActivationControls() {
   activationGrid.replaceChildren(...controls);
   const activeQuestion = getActiveQuestion();
   activeQuestionStatusEl.textContent = activeQuestion
-    ? `Aktivt spørgsmål ${activeQuestion.order}`
-    : "Intet aktivt spørgsmål";
+    ? `Aktivt spÃ¸rgsmÃ¥l ${activeQuestion.order}`
+    : "Intet aktivt spÃ¸rgsmÃ¥l";
   renderQuestionTypeControls();
 }
 
@@ -644,10 +619,10 @@ function renderActiveQuestionPanel() {
   const activeQuestion = getActiveQuestion();
 
   if (!activeQuestion) {
-    activeQuestionLabelEl.textContent = "Aktivt spørgsmål";
+    activeQuestionLabelEl.textContent = "Aktivt spÃ¸rgsmÃ¥l";
     activeQuestionTitleEl.textContent = "-";
     activeAnswerCountEl.textContent = "0 svar";
-    activeAnswerListEl.replaceChildren(createEmptyMessage("Intet aktivt spørgsmål."));
+    activeAnswerListEl.replaceChildren(createEmptyMessage("Intet aktivt spÃ¸rgsmÃ¥l."));
     renderWinnerPanel(null, []);
     return;
   }
@@ -655,16 +630,16 @@ function renderActiveQuestionPanel() {
   const activeAnswers = getDisplayAnswersForQuestion(activeQuestion.id);
 
   activeQuestionLabelEl.textContent = [
-    `Aktivt spørgsmål ${activeQuestion.order}`,
+    `Aktivt spÃ¸rgsmÃ¥l ${activeQuestion.order}`,
     activeQuestion.category
   ]
     .filter(Boolean)
-    .join(" · ");
+    .join(" Â· ");
   activeQuestionTitleEl.textContent = activeQuestion.text;
   activeAnswerCountEl.textContent = formatAnswerCount(activeAnswers.length);
 
   if (!activeAnswers.length) {
-    activeAnswerListEl.replaceChildren(createEmptyMessage("Ingen svar på dette spørgsmål endnu."));
+    activeAnswerListEl.replaceChildren(createEmptyMessage("Ingen svar pÃ¥ dette spÃ¸rgsmÃ¥l endnu."));
     renderWinnerPanel(activeQuestion, activeAnswers);
     return;
   }
@@ -719,7 +694,7 @@ function createAnswerRow(submission) {
 function renderWinnerPanel(activeQuestion, activeAnswers) {
   if (!activeQuestion) {
     winnerFormEl.hidden = true;
-    winnerCurrentEl.replaceChildren(createEmptyMessage("Intet aktivt spørgsmål."));
+    winnerCurrentEl.replaceChildren(createEmptyMessage("Intet aktivt spÃ¸rgsmÃ¥l."));
     return;
   }
 
@@ -755,7 +730,7 @@ function createWinnerBlock(winner, question) {
   block.className = "winner-block winner-announcement has-winner";
 
   const label = document.createElement("span");
-  label.textContent = `Spørgsmål ${question.order} · annonceret vinder`;
+  label.textContent = `SpÃ¸rgsmÃ¥l ${question.order} Â· annonceret vinder`;
 
   const name = document.createElement("strong");
   name.textContent = winner.winnerName;
@@ -782,7 +757,7 @@ function createWinnerBlock(winner, question) {
   }
 
   const meta = document.createElement("p");
-  meta.textContent = metaParts.join(" · ");
+  meta.textContent = metaParts.join(" Â· ");
   if (answeredAtTitle) {
     meta.title = answeredAtTitle;
   }
@@ -793,7 +768,7 @@ function createWinnerBlock(winner, question) {
 
 function createQuestionVideoElement(videoState) {
   const video = document.createElement("video");
-  video.src = videoState.embedUrl;
+  video.src = videoState.src;
   video.controls = true;
   video.playsInline = true;
   video.preload = "metadata";
@@ -803,7 +778,7 @@ function createQuestionVideoElement(videoState) {
 
 function openQuestionVideo(questionId) {
   const question = questionsCache.find((item) => item.id === questionId);
-  const videoState = getPlayableQuestionVideo(questionId);
+  const videoState = getQuestionVideo(questionId);
 
   if (!question || !videoState) {
     return;
@@ -813,7 +788,13 @@ function openQuestionVideo(questionId) {
 
   const video = createQuestionVideoElement(videoState);
   openVideoQuestionId = questionId;
-  videoModalLabelEl.textContent = [`Spørgsmål ${question.order}`, question.category].filter(Boolean).join(" · ");
+  videoModalLabelEl.textContent = [
+    `Spm. ${question.order}`,
+    question.category,
+    videoState.label
+  ]
+    .filter(Boolean)
+    .join(" - ");
   videoModalTitleEl.textContent = question.text;
   videoModalBodyEl.replaceChildren(video);
   videoModalEl.hidden = false;
@@ -851,16 +832,6 @@ function openQrModal() {
 function closeQrModal() {
   qrModalEl.hidden = true;
   document.body.classList.remove("modal-open");
-}
-
-function syncOpenVideoModal() {
-  if (!openVideoQuestionId) {
-    return;
-  }
-
-  if (!getPlayableQuestionVideo(openVideoQuestionId)) {
-    closeVideoModal();
-  }
 }
 
 function renderParticipants() {
@@ -903,7 +874,7 @@ function shareLink() {
     navigator
       .share({
         title: "Bryllupsquiz",
-        text: "Svar på bryllupsquizzen",
+        text: "Svar pÃ¥ bryllupsquizzen",
         url
       })
       .then(() => showShareStatus("Link delt"))
@@ -912,7 +883,7 @@ function shareLink() {
   }
 
   if (!navigator.clipboard) {
-    showShareStatus("Kopiér linket fra adresselinjen");
+    showShareStatus("KopiÃ©r linket fra adresselinjen");
     return;
   }
 
@@ -1030,7 +1001,7 @@ async function saveWinner(event) {
   try {
     const { getWinnerRef, set } = firebaseState;
     await set(getWinnerRef(activeQuestion.id), buildWinnerPayload(activeQuestion, candidate, correctAnswerValue));
-    showWinnerStatus(`Vinder annonceret for spørgsmål ${activeQuestion.order}: ${candidate.name}.`);
+    showWinnerStatus(`Vinder annonceret for spÃ¸rgsmÃ¥l ${activeQuestion.order}: ${candidate.name}.`);
   } catch (error) {
     showWinnerStatus(`Kunne ikke gemme vinder: ${error.message}`, { persistent: true });
   } finally {
@@ -1045,7 +1016,7 @@ async function initFirebase() {
   renderQuestionTypeControls();
 
   if (!hasFirebaseConfig(firebaseConfig)) {
-    activeQuestionStatusEl.textContent = "Indsæt Firebase config i firebase-config.js.";
+    activeQuestionStatusEl.textContent = "IndsÃ¦t Firebase config i firebase-config.js.";
     return;
   }
 
@@ -1062,8 +1033,6 @@ async function initFirebase() {
     const participantsRef = database.ref(db, firebaseSettings.participantsPath);
     const submissionsRef = database.ref(db, firebaseSettings.submissionsPath);
     const winnersRef = database.ref(db, firebaseSettings.winnersPath);
-    const questionVideosRef = database.ref(db, firebaseSettings.questionVideosPath);
-
     firebaseState = {
       activeQuestionRef,
       getQuestionTypeRef: (questionId) => database.ref(db, `${firebaseSettings.questionsPath}/${questionId}/type`),
@@ -1141,17 +1110,6 @@ async function initFirebase() {
       }
     );
 
-    firebaseState.onValue(
-      questionVideosRef,
-      (snapshot) => {
-        questionVideosCache = normalizeQuestionVideos(snapshot.val() || {});
-        renderActivationControls();
-        syncOpenVideoModal();
-      },
-      (error) => {
-        activeQuestionStatusEl.textContent = `Firebase-fejl: ${error.message}`;
-      }
-    );
   } catch (error) {
     activeQuestionStatusEl.textContent = `Kunne ikke starte Firebase: ${error.message}`;
   }
