@@ -113,6 +113,10 @@ const winnerTargetLabelEl = document.getElementById("winner-target-label");
 const winnerTargetInputEl = document.getElementById("winner-target");
 const winnerSaveBtn = document.getElementById("winner-save");
 const winnerStatusEl = document.getElementById("winner-status");
+const resetAnswersBtn = document.getElementById("reset-answers");
+const resetWinnersBtn = document.getElementById("reset-winners");
+const resetParticipantsBtn = document.getElementById("reset-participants");
+const resetStatusEl = document.getElementById("reset-status");
 const videoModalEl = document.getElementById("video-modal");
 const videoModalLabelEl = document.getElementById("video-modal-label");
 const videoModalTitleEl = document.getElementById("video-modal-title");
@@ -121,6 +125,12 @@ const videoModalCloseBtn = document.getElementById("video-modal-close");
 const qrModalEl = document.getElementById("qr-modal");
 const qrModalImageEl = document.getElementById("qr-modal-code");
 const qrModalCloseBtn = document.getElementById("qr-modal-close");
+const winnerModalEl = document.getElementById("winner-modal");
+const winnerModalQuestionEl = document.getElementById("winner-modal-question");
+const winnerModalTitleEl = document.getElementById("winner-modal-title");
+const winnerModalAnswerEl = document.getElementById("winner-modal-answer");
+const winnerModalMetaEl = document.getElementById("winner-modal-meta");
+const winnerModalCloseBtn = document.getElementById("winner-modal-close");
 const participantCountEl = document.getElementById("participant-count");
 const participantsListEl = document.getElementById("participants-list");
 const firebaseConfig = window.firebaseConfig || {};
@@ -131,9 +141,10 @@ const firebaseSettings = {
   participantsPath: "participants",
   submissionsPath: "submissions",
   winnersPath: "winners",
+  videoConfigPath: "videos.json",
   ...(window.firebaseSettings || {})
 };
-const staticQuestionVideos = normalizeStaticQuestionVideos(window.staticQuestionVideos || {});
+let staticQuestionVideos = normalizeStaticQuestionVideos(window.staticQuestionVideos || {});
 
 let questionsCache = [...FALLBACK_QUESTIONS];
 let participantsCache = [];
@@ -143,6 +154,7 @@ let winnersCache = {};
 let activeQuestionId = "q1";
 let firebaseState = null;
 let winnerStatusTimer;
+let resetStatusTimer;
 let openVideoQuestionId = "";
 
 function hasFirebaseConfig(config) {
@@ -400,6 +412,32 @@ function getQuestionVideo(questionId) {
   return staticQuestionVideos[questionId] || null;
 }
 
+async function loadStaticQuestionVideos() {
+  const fallbackVideos = normalizeStaticQuestionVideos(window.staticQuestionVideos || {});
+  const configPath = typeof firebaseSettings.videoConfigPath === "string" ? firebaseSettings.videoConfigPath.trim() : "";
+
+  if (!configPath) {
+    staticQuestionVideos = fallbackVideos;
+    return;
+  }
+
+  try {
+    const response = await fetch(new URL(configPath, window.location.href), { cache: "no-store" });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    staticQuestionVideos = normalizeStaticQuestionVideos(await response.json());
+  } catch (error) {
+    staticQuestionVideos = fallbackVideos;
+
+    if (!Object.keys(fallbackVideos).length) {
+      showQuestionTypeStatus(`Kunne ikke hente videoer: ${error.message}`);
+    }
+  }
+}
+
 function getDisplayAnswersForQuestion(questionId) {
   const canonicalAnswers = answersCache.filter((answer) => answer.questionId === questionId);
   const canonicalKeys = new Set(
@@ -473,6 +511,10 @@ function getActiveQuestion() {
   return questionsCache.find((question) => question.id === activeQuestionId) || questionsCache[0];
 }
 
+function getQuestionById(questionId) {
+  return questionsCache.find((question) => question.id === questionId) || null;
+}
+
 function showShareStatus(message) {
   statusEl.textContent = message;
   window.setTimeout(() => {
@@ -505,6 +547,28 @@ function showWinnerStatus(message, options = {}) {
       winnerStatusEl.textContent = "";
     }
   }, 3500);
+}
+
+function showResetStatus(message, options = {}) {
+  resetStatusEl.textContent = message;
+
+  if (options.persistent) {
+    window.clearTimeout(resetStatusTimer);
+    return;
+  }
+
+  window.clearTimeout(resetStatusTimer);
+  resetStatusTimer = window.setTimeout(() => {
+    if (resetStatusEl.textContent === message) {
+      resetStatusEl.textContent = "";
+    }
+  }, 3500);
+}
+
+function setResetButtonsDisabled(disabled) {
+  [resetAnswersBtn, resetWinnersBtn, resetParticipantsBtn].forEach((button) => {
+    button.disabled = disabled || !firebaseState;
+  });
 }
 
 function parseCorrectAnswerValue(rawValue, type) {
@@ -809,7 +873,7 @@ function createQuestionVideoPlayer(videoState) {
 }
 
 function openQuestionVideo(questionId) {
-  const question = questionsCache.find((item) => item.id === questionId);
+  const question = getQuestionById(questionId);
   const videoState = getQuestionVideo(questionId);
 
   if (!question || !videoState) {
@@ -817,6 +881,7 @@ function openQuestionVideo(questionId) {
   }
 
   closeQrModal();
+  closeWinnerModal();
 
   const { player, video } = createQuestionVideoPlayer(videoState);
   openVideoQuestionId = questionId;
@@ -855,6 +920,7 @@ function closeVideoModal() {
 
 function openQrModal() {
   closeVideoModal();
+  closeWinnerModal();
   qrModalImageEl.src = qrImage.src;
   qrModalImageEl.alt = qrImage.alt.replace("QR-kode", "Stor QR-kode");
   qrModalEl.hidden = false;
@@ -863,6 +929,51 @@ function openQrModal() {
 
 function closeQrModal() {
   qrModalEl.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+function openWinnerModal(winner, question = null) {
+  if (!winnerModalEl || !winner) {
+    return;
+  }
+
+  const resolvedQuestion = question || getQuestionById(winner.questionId);
+
+  if (!resolvedQuestion) {
+    return;
+  }
+
+  closeVideoModal();
+  closeQrModal();
+
+  const correctAnswer = winner.correctAnswer || formatAnswerValue(resolvedQuestion.type, winner.correctAnswerValue);
+  const metaParts = [
+    `Facit: ${correctAnswer}`,
+    formatDistance(resolvedQuestion.type, winner.distance)
+  ].filter(Boolean);
+  const answeredAt = formatClock({
+    createdAt: winner.answeredAt,
+    createdAtClient: winner.answeredAtClient
+  });
+
+  if (answeredAt) {
+    metaParts.push(`Svarede kl. ${answeredAt}`);
+  }
+
+  winnerModalQuestionEl.textContent = `Spørgsmål ${resolvedQuestion.order}`;
+  winnerModalTitleEl.textContent = winner.winnerName;
+  winnerModalAnswerEl.textContent = `Svar: ${winner.answer}`;
+  winnerModalMetaEl.textContent = metaParts.join(" · ");
+  winnerModalEl.hidden = false;
+  document.body.classList.add("modal-open");
+}
+
+function closeWinnerModal() {
+  if (!winnerModalEl) {
+    return;
+  }
+
+  winnerModalEl.hidden = true;
   document.body.classList.remove("modal-open");
 }
 
@@ -949,6 +1060,53 @@ async function activateQuestion(questionId) {
   }
 }
 
+async function resetQuizData(kind) {
+  if (!firebaseState) {
+    showResetStatus("Firebase er ikke klar endnu.");
+    return;
+  }
+
+  const { answersRef, participantsRef, remove, submissionsRef, winnersRef } = firebaseState;
+  const resetConfigs = {
+    answers: {
+      label: "alle svar",
+      done: "Alle svar er ryddet.",
+      refs: [answersRef, submissionsRef]
+    },
+    winners: {
+      label: "alle vindere",
+      done: "Alle vindere er ryddet.",
+      refs: [winnersRef]
+    },
+    participants: {
+      label: "alle deltagere",
+      done: "Alle deltagere er ryddet.",
+      refs: [participantsRef]
+    }
+  };
+  const config = resetConfigs[kind];
+
+  if (!config) {
+    return;
+  }
+
+  if (!window.confirm(`Er du sikker på, at du vil nulstille ${config.label}?`)) {
+    return;
+  }
+
+  setResetButtonsDisabled(true);
+  showResetStatus(`Rydder ${config.label}...`);
+
+  try {
+    await Promise.all(config.refs.map((itemRef) => remove(itemRef)));
+    showResetStatus(config.done);
+  } catch (error) {
+    showResetStatus(`Kunne ikke nulstille: ${error.message}`, { persistent: true });
+  } finally {
+    setResetButtonsDisabled(false);
+  }
+}
+
 async function setQuestionType(type) {
   const normalizedType = normalizeQuestionType(type);
   const activeQuestion = getActiveQuestion();
@@ -1032,7 +1190,9 @@ async function saveWinner(event) {
 
   try {
     const { getWinnerRef, set } = firebaseState;
-    await set(getWinnerRef(activeQuestion.id), buildWinnerPayload(activeQuestion, candidate, correctAnswerValue));
+    const winnerPayload = buildWinnerPayload(activeQuestion, candidate, correctAnswerValue);
+    await set(getWinnerRef(activeQuestion.id), winnerPayload);
+    openWinnerModal(winnerPayload, activeQuestion);
     showWinnerStatus(`Vinder annonceret for spørgsmål ${activeQuestion.order}: ${candidate.name}.`);
   } catch (error) {
     showWinnerStatus(`Kunne ikke gemme vinder: ${error.message}`, { persistent: true });
@@ -1046,6 +1206,7 @@ async function initFirebase() {
   renderActiveQuestionPanel();
   renderParticipants();
   renderQuestionTypeControls();
+  setResetButtonsDisabled(true);
 
   if (!hasFirebaseConfig(firebaseConfig)) {
     showQuestionTypeStatus("Indsæt Firebase config i firebase-config.js.");
@@ -1067,12 +1228,18 @@ async function initFirebase() {
     const winnersRef = database.ref(db, firebaseSettings.winnersPath);
     firebaseState = {
       activeQuestionRef,
+      answersRef,
+      participantsRef,
+      submissionsRef,
+      winnersRef,
       getQuestionTypeRef: (questionId) => database.ref(db, `${firebaseSettings.questionsPath}/${questionId}/type`),
       getWinnerRef: (questionId) => database.ref(db, `${firebaseSettings.winnersPath}/${questionId}`),
       onValue: database.onValue,
+      remove: database.remove,
       serverTimestamp: database.serverTimestamp,
       set: database.set
     };
+    setResetButtonsDisabled(false);
 
     firebaseState.onValue(
       questionsRef,
@@ -1171,6 +1338,9 @@ questionTypeControls.addEventListener("click", (event) => {
   }
 });
 winnerFormEl.addEventListener("submit", saveWinner);
+resetAnswersBtn.addEventListener("click", () => resetQuizData("answers"));
+resetWinnersBtn.addEventListener("click", () => resetQuizData("winners"));
+resetParticipantsBtn.addEventListener("click", () => resetQuizData("participants"));
 videoModalCloseBtn.addEventListener("click", closeVideoModal);
 videoModalEl.addEventListener("click", (event) => {
   if (event.target.closest("[data-video-close]")) {
@@ -1181,6 +1351,12 @@ qrModalCloseBtn.addEventListener("click", closeQrModal);
 qrModalEl.addEventListener("click", (event) => {
   if (event.target.closest("[data-qr-close]")) {
     closeQrModal();
+  }
+});
+winnerModalCloseBtn.addEventListener("click", closeWinnerModal);
+winnerModalEl.addEventListener("click", (event) => {
+  if (event.target.closest("[data-winner-close]")) {
+    closeWinnerModal();
   }
 });
 window.addEventListener("keydown", (event) => {
@@ -1195,8 +1371,13 @@ window.addEventListener("keydown", (event) => {
   if (!qrModalEl.hidden) {
     closeQrModal();
   }
+
+  if (!winnerModalEl.hidden) {
+    closeWinnerModal();
+  }
 });
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
   setupQrCode();
+  await loadStaticQuestionVideos();
   initFirebase();
 });

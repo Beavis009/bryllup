@@ -96,6 +96,21 @@
               <p class="empty">Ingen deltagere endnu.</p>
             </div>
           </section>
+
+          <section class="panel reset-panel">
+            <div class="board-header">
+              <div>
+                <h2>Nulstil</h2>
+                <p class="muted-text">Ryd quizdata</p>
+              </div>
+            </div>
+            <div class="reset-actions">
+              <button id="reset-answers" type="button" class="secondary" disabled>Svar</button>
+              <button id="reset-winners" type="button" class="secondary" disabled>Vindere</button>
+              <button id="reset-participants" type="button" class="secondary" disabled>Deltagere</button>
+            </div>
+            <p id="reset-status" class="status-text"></p>
+          </section>
         </aside>
       </div>
     </main>
@@ -126,6 +141,19 @@
         </div>
         <div class="qr-modal-body">
           <img id="qr-modal-code" alt="Stor QR-kode til svar-siden" />
+        </div>
+      </section>
+    </div>
+
+    <div id="winner-modal" class="video-modal winner-modal" hidden>
+      <div class="video-modal-backdrop" data-winner-close></div>
+      <section class="video-dialog winner-dialog" role="dialog" aria-modal="true" aria-labelledby="winner-modal-title">
+        <div class="winner-modal-shell">
+          <span id="winner-modal-question" class="question-number">Vinder</span>
+          <h2 id="winner-modal-title">-</h2>
+          <p id="winner-modal-answer" class="winner-modal-answer"></p>
+          <p id="winner-modal-meta" class="winner-modal-meta"></p>
+          <button id="winner-modal-close" type="button" class="secondary compact-action">Luk</button>
         </div>
       </section>
     </div>

@@ -397,6 +397,52 @@ h3 {
   margin-bottom: 0;
 }
 
+.winner-dialog {
+  width: min(100%, 760px);
+  padding: clamp(2rem, 5vw, 4rem);
+  text-align: center;
+  overflow: hidden;
+}
+
+.winner-modal-shell {
+  display: grid;
+  justify-items: center;
+  gap: 1.15rem;
+}
+
+.winner-modal .question-number {
+  color: var(--accent);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.winner-modal h2 {
+  font-size: clamp(3.2rem, 9vw, 6.4rem);
+  line-height: 0.95;
+  overflow-wrap: anywhere;
+}
+
+.winner-modal-answer {
+  color: var(--text);
+  font-size: clamp(1.35rem, 3vw, 2.1rem);
+  font-weight: 800;
+  margin-bottom: 0;
+}
+
+.winner-modal-meta {
+  color: var(--muted);
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  line-height: 1.35;
+  margin-bottom: 0;
+}
+
+.winner-modal .compact-action {
+  min-width: 9rem;
+  margin-top: 0.6rem;
+}
+
 .qr-dialog {
   width: min(100%, 640px);
 }
@@ -869,6 +915,23 @@ button.secondary,
   overflow-wrap: anywhere;
 }
 
+.reset-panel {
+  margin-bottom: 0;
+}
+
+.reset-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.reset-actions button {
+  width: 100%;
+  min-height: 2.65rem;
+  padding-inline: 0.45rem;
+}
+
 @media (max-width: 760px) {
   .summary,
   .winner-form {
@@ -945,5 +1008,9 @@ button.secondary,
 @media (max-width: 420px) {
   .question-rail {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .reset-actions {
+    grid-template-columns: 1fr;
   }
 }

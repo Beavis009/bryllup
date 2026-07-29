@@ -16,12 +16,5 @@ window.firebaseSettings = {
   participantsPath: "participants",
   submissionsPath: "submissions",
   winnersPath: "winners",
-  allowClientClear: false
-};
-
-window.staticQuestionVideos = {
-  q6: {
-    src: "videos/q6-test.mp4",
-    label: "Testvideo"
-  }
+  videoConfigPath: "videos.json"
 };
