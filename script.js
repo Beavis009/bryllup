@@ -35,7 +35,7 @@ const FALLBACK_QUESTIONS = [
     id: "q4",
     order: 4,
     category: "Anna video",
-    text: "Hvor mange balloner kan Anna puste op på 30 sekunder?",
+    text: "Hvor mange balloner kan Anna puste op på 1 minut?",
     type: "number"
   },
   {
@@ -96,7 +96,7 @@ const FALLBACK_QUESTIONS = [
   }
 ];
 const QUESTION_TEXT_OVERRIDES = {
-  q4: "Hvor mange balloner kan Anna puste op på 30 sekunder?",
+  q4: "Hvor mange balloner kan Anna puste op på 1 minut?",
   q5: "Hvor mange Disney-film kan Anna gætte på 30 sekunder?",
   q9: "Hvor mange Disney-karakterer kan Anna nævne på 30 sekunder?"
 };
