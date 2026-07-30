@@ -740,6 +740,9 @@ button.secondary,
 }
 
 .active-question-video {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
   margin-top: 0.8rem;
 }
 

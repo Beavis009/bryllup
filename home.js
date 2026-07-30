@@ -379,7 +379,7 @@ function normalizeWinners(data = {}) {
   );
 }
 
-function normalizeStaticQuestionVideo(questionId, data = {}) {
+function normalizeStaticQuestionVideo(questionId, data = {}, index = 0) {
   const videoData = typeof data === "string" ? { src: data } : data;
 
   if (!QUESTION_ID_PATTERN.test(questionId) || !videoData || typeof videoData !== "object") {
@@ -393,23 +393,34 @@ function normalizeStaticQuestionVideo(questionId, data = {}) {
   }
 
   return {
+    id: typeof videoData.id === "string" && videoData.id.trim() ? videoData.id.trim() : `${questionId}-${index}`,
     questionId,
     src,
     label: typeof videoData.label === "string" ? videoData.label.trim() : ""
   };
 }
 
+function normalizeStaticQuestionVideoList(questionId, data = []) {
+  const videos = Array.isArray(data) ? data : [data];
+  return videos.map((video, index) => normalizeStaticQuestionVideo(questionId, video, index)).filter(Boolean);
+}
+
 function normalizeStaticQuestionVideos(data = {}) {
   return Object.fromEntries(
     Object.entries(data)
-      .map(([questionId, video]) => normalizeStaticQuestionVideo(questionId, video))
-      .filter(Boolean)
-      .map((video) => [video.questionId, video])
+      .map(([questionId, video]) => [questionId, normalizeStaticQuestionVideoList(questionId, video)])
+      .filter(([questionId, videos]) => QUESTION_ID_PATTERN.test(questionId) && videos.length)
   );
 }
 
-function getQuestionVideo(questionId) {
-  return staticQuestionVideos[questionId] || null;
+function getQuestionVideos(questionId) {
+  return staticQuestionVideos[questionId] || [];
+}
+
+function getQuestionVideo(questionId, videoIndex = 0) {
+  const videos = getQuestionVideos(questionId);
+  const index = Number(videoIndex);
+  return videos[Number.isInteger(index) ? index : 0] || null;
 }
 
 async function loadStaticQuestionVideos() {
@@ -674,22 +685,27 @@ function renderActivationControls() {
 }
 
 function renderActiveQuestionVideo(question) {
-  const videoState = question ? getQuestionVideo(question.id) : null;
+  const videoStates = question ? getQuestionVideos(question.id) : [];
 
-  if (!question || !videoState) {
+  if (!question || !videoStates.length) {
     activeQuestionVideoEl.hidden = true;
     activeQuestionVideoEl.replaceChildren();
     return;
   }
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "active-question-video-button";
-  button.dataset.activeVideoQuestionId = question.id;
-  button.textContent = videoState.label || "Afspil video";
+  const buttons = videoStates.map((videoState, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "active-question-video-button";
+    button.dataset.activeVideoQuestionId = question.id;
+    button.dataset.activeVideoIndex = String(index);
+    button.textContent = videoState.label || "Afspil video";
+
+    return button;
+  });
 
   activeQuestionVideoEl.hidden = false;
-  activeQuestionVideoEl.replaceChildren(button);
+  activeQuestionVideoEl.replaceChildren(...buttons);
 }
 
 function renderActiveQuestionPanel() {
@@ -880,9 +896,9 @@ function createQuestionVideoPlayer(videoState) {
   return { player, video };
 }
 
-function openQuestionVideo(questionId) {
+function openQuestionVideo(questionId, videoIndex = 0) {
   const question = getQuestionById(questionId);
-  const videoState = getQuestionVideo(questionId);
+  const videoState = getQuestionVideo(questionId, videoIndex);
 
   if (!question || !videoState) {
     return;
@@ -1342,7 +1358,7 @@ activationGrid.addEventListener("click", (event) => {
 activeQuestionVideoEl.addEventListener("click", (event) => {
   const button = event.target.closest("[data-active-video-question-id]");
   if (button) {
-    openQuestionVideo(button.dataset.activeVideoQuestionId);
+    openQuestionVideo(button.dataset.activeVideoQuestionId, button.dataset.activeVideoIndex);
   }
 });
 questionTypeControls.addEventListener("click", (event) => {
