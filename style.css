@@ -922,6 +922,11 @@ button.secondary,
   margin-top: 0.85rem;
 }
 
+.winner-form.predefined-answer {
+  grid-template-columns: auto;
+  justify-content: start;
+}
+
 .empty {
   color: var(--muted);
   text-align: center;

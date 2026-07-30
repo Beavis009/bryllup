@@ -116,6 +116,7 @@ const activeAnswerCountEl = document.getElementById("active-answer-count");
 const activeAnswerListEl = document.getElementById("active-answer-list");
 const winnerCurrentEl = document.getElementById("winner-current");
 const winnerFormEl = document.getElementById("winner-form");
+const winnerTargetFieldEl = document.getElementById("winner-target-field");
 const winnerTargetLabelEl = document.getElementById("winner-target-label");
 const winnerTargetInputEl = document.getElementById("winner-target");
 const winnerSaveBtn = document.getElementById("winner-save");
@@ -501,22 +502,74 @@ function normalizeStaticQuestionVideoList(questionId, data = []) {
   return videos.map((video, index) => normalizeStaticQuestionVideo(questionId, video, index)).filter(Boolean);
 }
 
+function normalizeStaticQuestionAnswerValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const answerValue = Number(String(value).trim().replace(",", "."));
+  return Number.isFinite(answerValue) && answerValue >= 0 && answerValue <= 999999 ? answerValue : null;
+}
+
+function normalizeStaticQuestionVideoConfig(questionId, data = []) {
+  const isQuestionConfig =
+    data &&
+    typeof data === "object" &&
+    !Array.isArray(data) &&
+    ("videos" in data || "correctAnswerValue" in data || "usesPredefinedAnswer" in data);
+  const configData = isQuestionConfig ? data : { videos: data };
+  const videos = normalizeStaticQuestionVideoList(questionId, configData.videos || []);
+  const correctAnswerValue = normalizeStaticQuestionAnswerValue(configData.correctAnswerValue);
+  const usesPredefinedAnswer = Boolean(configData.usesPredefinedAnswer) || correctAnswerValue !== null;
+
+  if (!QUESTION_ID_PATTERN.test(questionId) || (!videos.length && correctAnswerValue === null && !usesPredefinedAnswer)) {
+    return null;
+  }
+
+  return {
+    questionId,
+    videos,
+    correctAnswerValue,
+    usesPredefinedAnswer
+  };
+}
+
 function normalizeStaticQuestionVideos(data = {}) {
   return Object.fromEntries(
     Object.entries(data)
-      .map(([questionId, video]) => [questionId, normalizeStaticQuestionVideoList(questionId, video)])
-      .filter(([questionId, videos]) => QUESTION_ID_PATTERN.test(questionId) && videos.length)
+      .map(([questionId, videoConfig]) => [questionId, normalizeStaticQuestionVideoConfig(questionId, videoConfig)])
+      .filter(([questionId, videoConfig]) => QUESTION_ID_PATTERN.test(questionId) && videoConfig)
   );
 }
 
 function getQuestionVideos(questionId) {
-  return staticQuestionVideos[questionId] || [];
+  return staticQuestionVideos[questionId]?.videos || [];
 }
 
 function getQuestionVideo(questionId, videoIndex = 0) {
   const videos = getQuestionVideos(questionId);
   const index = Number(videoIndex);
   return videos[Number.isInteger(index) ? index : 0] || null;
+}
+
+function hasQuestionVideos(questionId) {
+  return getQuestionVideos(questionId).length > 0;
+}
+
+function getPredefinedQuestionAnswerValue(questionOrId) {
+  const questionId = typeof questionOrId === "string" ? questionOrId : questionOrId?.id;
+  const answerValue = staticQuestionVideos[questionId]?.correctAnswerValue;
+
+  if (typeof answerValue !== "number" || !Number.isFinite(answerValue)) {
+    return null;
+  }
+
+  const questionType = typeof questionOrId === "string" ? getQuestionById(questionId)?.type : questionOrId?.type;
+  return normalizeQuestionType(questionType) === "time" ? Math.trunc(answerValue) : answerValue;
+}
+
+function usesPredefinedQuestionAnswer(questionId) {
+  return Boolean(staticQuestionVideos[questionId]?.usesPredefinedAnswer);
 }
 
 async function loadStaticQuestionVideos() {
@@ -884,14 +937,20 @@ function renderWinnerPanel(activeQuestion, activeAnswers) {
 
   const currentWinner = winnersCache[activeQuestion.id];
   const inputIsFocused = document.activeElement === winnerTargetInputEl;
+  const usesPredefinedAnswer = usesPredefinedQuestionAnswer(activeQuestion.id);
+  const predefinedAnswerValue = getPredefinedQuestionAnswerValue(activeQuestion);
+  const hasPredefinedAnswer = predefinedAnswerValue !== null;
 
   winnerFormEl.hidden = false;
+  winnerFormEl.classList.toggle("predefined-answer", usesPredefinedAnswer);
+  winnerTargetFieldEl.hidden = usesPredefinedAnswer;
+  winnerTargetInputEl.required = !usesPredefinedAnswer;
   winnerTargetLabelEl.textContent = activeQuestion.type === "time" ? "Rigtigt svar i sekunder" : "Rigtigt svar";
   winnerTargetInputEl.placeholder = activeQuestion.type === "time" ? "Antal sekunder" : "Rigtigt tal";
   winnerTargetInputEl.inputMode = activeQuestion.type === "time" ? "numeric" : "decimal";
   winnerTargetInputEl.step = activeQuestion.type === "time" ? "1" : "any";
-  winnerTargetInputEl.disabled = !firebaseState;
-  winnerSaveBtn.disabled = !firebaseState || !activeAnswers.length;
+  winnerTargetInputEl.disabled = !firebaseState || usesPredefinedAnswer;
+  winnerSaveBtn.disabled = !firebaseState || !activeAnswers.length || (usesPredefinedAnswer && !hasPredefinedAnswer);
 
   if (currentWinner) {
     if (!inputIsFocused && currentWinner.correctAnswerValue !== null) {
@@ -899,6 +958,21 @@ function renderWinnerPanel(activeQuestion, activeAnswers) {
     }
 
     winnerCurrentEl.replaceChildren(createWinnerBlock(currentWinner, activeQuestion));
+    return;
+  }
+
+  if (usesPredefinedAnswer) {
+    if (!inputIsFocused && hasPredefinedAnswer) {
+      winnerTargetInputEl.value = String(predefinedAnswerValue);
+    }
+
+    winnerCurrentEl.replaceChildren(
+      createEmptyMessage(
+        hasPredefinedAnswer
+          ? `Facit: ${formatAnswerValue(activeQuestion.type, predefinedAnswerValue)}`
+          : "Facit mangler for dette spørgsmål."
+      )
+    );
     return;
   }
 
@@ -1286,10 +1360,19 @@ async function saveWinner(event) {
     return;
   }
 
-  const correctAnswerValue = parseCorrectAnswerValue(winnerTargetInputEl.value, activeQuestion.type);
+  const usesPredefinedAnswer = usesPredefinedQuestionAnswer(activeQuestion.id);
+  const predefinedAnswerValue = getPredefinedQuestionAnswerValue(activeQuestion);
+  const correctAnswerValue = usesPredefinedAnswer
+    ? predefinedAnswerValue
+    : parseCorrectAnswerValue(winnerTargetInputEl.value, activeQuestion.type);
+
   if (correctAnswerValue === null) {
     showWinnerStatus(
-      activeQuestion.type === "time" ? "Skriv det rigtige svar som hele sekunder." : "Skriv det rigtige svar som et tal."
+      usesPredefinedAnswer
+        ? "Facit mangler for dette spørgsmål."
+        : activeQuestion.type === "time"
+          ? "Skriv det rigtige svar som hele sekunder."
+          : "Skriv det rigtige svar som et tal."
     );
     return;
   }
