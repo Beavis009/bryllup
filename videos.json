@@ -1,14 +1,4 @@
 {
-  "q1": [
-    {
-      "src": "videos/q1-first-10s.mp4",
-      "label": "Intro"
-    },
-    {
-      "src": "videos/q1.mp4",
-      "label": "Slutning"
-    }
-  ],
   "q2": [
     {
       "src": "videos/q2-first-10s.mp4",
@@ -29,8 +19,24 @@
       "label": "Slutning"
     }
   ],
-  "q6": {
-    "src": "videos/q6-test.mp4",
-    "label": "Testvideo"
-  }
+  "q6": [
+    {
+      "src": "videos/q6-first-10s.mp4",
+      "label": "Intro"
+    },
+    {
+      "src": "videos/q6.mp4",
+      "label": "Slutning"
+    }
+  ],
+  "q9": [
+    {
+      "src": "videos/q9-first-10s.mp4",
+      "label": "Intro"
+    },
+    {
+      "src": "videos/q9.mp4",
+      "label": "Slutning"
+    }
+  ]
 }
