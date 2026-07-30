@@ -917,7 +917,7 @@ button.secondary,
 }
 
 .winner-form {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: end;
   margin-top: 0.85rem;
 }
