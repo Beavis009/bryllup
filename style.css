@@ -927,6 +927,10 @@ button.secondary,
   justify-content: start;
 }
 
+.winner-target-field.is-hidden {
+  display: none;
+}
+
 .empty {
   color: var(--muted);
   text-align: center;

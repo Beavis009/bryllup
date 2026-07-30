@@ -944,6 +944,8 @@ function renderWinnerPanel(activeQuestion, activeAnswers) {
   winnerFormEl.hidden = false;
   winnerFormEl.classList.toggle("predefined-answer", usesPredefinedAnswer);
   winnerTargetFieldEl.hidden = usesPredefinedAnswer;
+  winnerTargetFieldEl.classList.toggle("is-hidden", usesPredefinedAnswer);
+  winnerTargetFieldEl.setAttribute("aria-hidden", String(usesPredefinedAnswer));
   winnerTargetInputEl.required = !usesPredefinedAnswer;
   winnerTargetLabelEl.textContent = activeQuestion.type === "time" ? "Rigtigt svar i sekunder" : "Rigtigt svar";
   winnerTargetInputEl.placeholder = activeQuestion.type === "time" ? "Antal sekunder" : "Rigtigt tal";
@@ -953,8 +955,10 @@ function renderWinnerPanel(activeQuestion, activeAnswers) {
   winnerSaveBtn.disabled = !firebaseState || !activeAnswers.length || (usesPredefinedAnswer && !hasPredefinedAnswer);
 
   if (currentWinner) {
-    if (!inputIsFocused && currentWinner.correctAnswerValue !== null) {
+    if (!usesPredefinedAnswer && !inputIsFocused && currentWinner.correctAnswerValue !== null) {
       winnerTargetInputEl.value = String(currentWinner.correctAnswerValue);
+    } else if (usesPredefinedAnswer) {
+      winnerTargetInputEl.value = "";
     }
 
     winnerCurrentEl.replaceChildren(createWinnerBlock(currentWinner, activeQuestion));
