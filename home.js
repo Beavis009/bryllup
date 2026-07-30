@@ -938,10 +938,11 @@ function createAnswerRow(submission) {
   }
 
   const answer = document.createElement("p");
+  answer.className = "answer-row-answer";
   answer.textContent = submission.answer;
 
-  header.append(name, meta);
-  row.append(header, answer);
+  header.append(name, answer);
+  row.append(header, meta);
   return row;
 }
 
