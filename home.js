@@ -970,13 +970,7 @@ function renderWinnerPanel(activeQuestion, activeAnswers) {
       winnerTargetInputEl.value = "";
     }
 
-    winnerCurrentEl.replaceChildren(
-      createEmptyMessage(
-        hasPredefinedAnswer
-          ? "Klar til at annoncere vinder."
-          : "Resultat mangler for dette spørgsmål."
-      )
-    );
+    winnerCurrentEl.replaceChildren(createEmptyMessage("Ingen vinder annonceret endnu."));
     return;
   }
 
