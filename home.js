@@ -809,6 +809,10 @@ function setupQrCode() {
 }
 
 function renderQuestionTypeControls() {
+  if (!questionTypeControls) {
+    return;
+  }
+
   const activeQuestion = getActiveQuestion();
 
   questionTypeControls.querySelectorAll("[data-question-type]").forEach((button) => {
@@ -1319,7 +1323,7 @@ async function setQuestionType(type) {
   const normalizedType = normalizeQuestionType(type);
   const activeQuestion = getActiveQuestion();
 
-  if (!firebaseState || !activeQuestion || activeQuestion.type === normalizedType) {
+  if (!questionTypeControls || !firebaseState || !activeQuestion || activeQuestion.type === normalizedType) {
     return;
   }
 
@@ -1554,12 +1558,14 @@ activeQuestionVideoEl.addEventListener("click", (event) => {
     openQuestionVideo(button.dataset.activeVideoQuestionId, button.dataset.activeVideoIndex);
   }
 });
-questionTypeControls.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-question-type]");
-  if (button) {
-    setQuestionType(button.dataset.questionType);
-  }
-});
+if (questionTypeControls) {
+  questionTypeControls.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-question-type]");
+    if (button) {
+      setQuestionType(button.dataset.questionType);
+    }
+  });
+}
 winnerFormEl.addEventListener("submit", saveWinner);
 resetAnswersBtn.addEventListener("click", () => resetQuizData("answers"));
 resetWinnersBtn.addEventListener("click", () => resetQuizData("winners"));
