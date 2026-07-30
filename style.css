@@ -918,8 +918,13 @@ button.secondary,
 
 .winner-form {
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: end;
   margin-top: 0.85rem;
+}
+
+.winner-form button {
+  min-height: calc(1em + 1.7rem + 2px);
+  white-space: nowrap;
 }
 
 .winner-form.predefined-answer {
@@ -991,6 +996,10 @@ button.secondary,
   .summary,
   .winner-form {
     grid-template-columns: 1fr;
+  }
+
+  .winner-form button {
+    width: 100%;
   }
 
   .dashboard-topbar,
