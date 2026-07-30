@@ -753,18 +753,30 @@ button.secondary,
 }
 
 .answer-count {
+  display: inline-flex;
+  justify-content: center;
   flex: 0 0 auto;
+  min-width: 5rem;
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 0.25rem 0.6rem;
 }
 
 .live-panel {
-  min-height: 32rem;
+  --active-question-zone: 12.5rem;
+  --winner-zone: 16.25rem;
+  display: grid;
+  grid-template-rows: minmax(var(--active-question-zone), auto) minmax(var(--winner-zone), auto) minmax(10rem, auto);
+  min-height: 44rem;
 }
 
 .live-panel .board-header {
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  min-height: var(--active-question-zone);
+  margin-bottom: 0;
+  padding-bottom: 1rem;
 }
 
 .live-panel h2 {
@@ -850,12 +862,22 @@ button.secondary,
 
 .winner-panel {
   border-top: 1px solid var(--border);
-  margin-top: 1rem;
+  display: grid;
+  grid-template-rows: auto minmax(5.9rem, auto) minmax(4.75rem, auto) 1.2rem;
+  min-height: var(--winner-zone);
+  margin-top: 0;
   padding-top: 1rem;
 }
 
 .winner-heading {
+  min-height: 3.1rem;
   margin-bottom: 0.75rem;
+}
+
+.winner-current {
+  display: grid;
+  align-items: center;
+  min-height: 5.9rem;
 }
 
 .winner-block {
@@ -864,6 +886,10 @@ button.secondary,
   border-radius: 0.5rem;
   padding: 0.75rem;
   margin-bottom: 0.75rem;
+}
+
+.winner-current .winner-block {
+  margin-bottom: 0;
 }
 
 .winner-block.has-winner {
@@ -895,6 +921,7 @@ button.secondary,
 }
 
 .active-answer-list {
+  min-height: 10rem;
   max-height: 34rem;
 }
 
@@ -919,6 +946,7 @@ button.secondary,
 .winner-form {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: end;
+  min-height: 4.75rem;
   margin-top: 0.85rem;
 }
 
@@ -1009,6 +1037,20 @@ button.secondary,
 
   .dashboard-layout {
     grid-template-columns: 1fr;
+  }
+
+  .live-panel {
+    --active-question-zone: 14.5rem;
+    --winner-zone: 17rem;
+    min-height: 44rem;
+  }
+
+  .live-panel .board-header {
+    grid-template-columns: 1fr;
+  }
+
+  .live-panel .answer-count {
+    justify-self: start;
   }
 
   .question-rail {
