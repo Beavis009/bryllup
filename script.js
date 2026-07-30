@@ -453,7 +453,7 @@ function renderQuestionField() {
   meta.className = "question-step-meta";
 
   const counter = document.createElement("span");
-  counter.textContent = [`Aktivt spørgsmål ${question.order}`, question.category].filter(Boolean).join(" · ");
+  counter.textContent = ["Aktivt spørgsmål", question.category].filter(Boolean).join(" · ");
 
   const state = document.createElement("span");
   state.textContent = savedAnswer ? "Besvaret" : getQuestionTypeLabel(question.type);

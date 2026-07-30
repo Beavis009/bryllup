@@ -319,6 +319,11 @@ function formatAnswerCount(count) {
   return count === 1 ? "1 svar" : `${count} svar`;
 }
 
+function formatDisplayName(name) {
+  const displayName = String(name || "").trim();
+  return displayName.replace(/^Q\d+\s+(Test\b.*)$/i, "$1").trim() || displayName;
+}
+
 function normalizeQuestionType(type) {
   return QUESTION_TYPES.includes(type) ? type : "number";
 }
@@ -382,7 +387,7 @@ function normalizeParticipant(id, data = {}) {
 
   return {
     id,
-    name,
+    name: formatDisplayName(name),
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
     createdAtClient: typeof data.createdAtClient === "string" ? data.createdAtClient : ""
   };
@@ -398,7 +403,7 @@ function normalizeParticipants(data = {}) {
 function normalizeSubmission(id, data = {}) {
   const questionId = typeof data.questionId === "string" ? data.questionId : "";
   const answer = typeof data.answer === "string" ? data.answer.trim() : "";
-  const name = typeof data.name === "string" && data.name.trim() ? data.name.trim() : "Ukendt";
+  const name = typeof data.name === "string" && data.name.trim() ? formatDisplayName(data.name) : "Ukendt";
 
   if (!QUESTION_ID_PATTERN.test(questionId) || !answer) {
     return null;
@@ -468,7 +473,7 @@ function normalizeWinner(questionId, data = {}) {
     correctAnswerValue: typeof data.correctAnswerValue === "number" ? data.correctAnswerValue : null,
     submissionId: typeof data.submissionId === "string" ? data.submissionId : "",
     participantId,
-    winnerName,
+    winnerName: formatDisplayName(winnerName),
     answer,
     answerType: normalizeQuestionType(data.answerType),
     answerValue: typeof data.answerValue === "number" ? data.answerValue : null,
