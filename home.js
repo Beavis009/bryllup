@@ -36,14 +36,14 @@ const FALLBACK_QUESTIONS = [
     id: "q4",
     order: 4,
     category: "Anna video",
-    text: "Hvor mange Disney-karakterer kan Anna nævne på 30 sekunder?",
+    text: "Hvor mange balloner kan Anna puste op på 30 sekunder?",
     type: "number"
   },
   {
     id: "q5",
     order: 5,
     category: "Anna opgave",
-    text: "Hvor mange Disney-citater kan Anna gætte på 30 sekunder?",
+    text: "Hvor mange Disney-film kan Anna gætte på 30 sekunder?",
     type: "number"
   },
   {
@@ -71,7 +71,7 @@ const FALLBACK_QUESTIONS = [
     id: "q9",
     order: 9,
     category: "Anna video",
-    text: "Hvor mange balloner kan Anna puste op på 30 sekunder?",
+    text: "Hvor mange Disney-karakterer kan Anna nævne på 30 sekunder?",
     type: "number"
   },
   {
@@ -96,6 +96,11 @@ const FALLBACK_QUESTIONS = [
     type: "time"
   }
 ];
+const QUESTION_TEXT_OVERRIDES = {
+  q4: "Hvor mange balloner kan Anna puste op på 30 sekunder?",
+  q5: "Hvor mange Disney-film kan Anna gætte på 30 sekunder?",
+  q9: "Hvor mange Disney-karakterer kan Anna nævne på 30 sekunder?"
+};
 
 const dashboardLockEl = document.getElementById("dashboard-lock");
 const dashboardLockFormEl = document.getElementById("dashboard-lock-form");
@@ -329,7 +334,15 @@ function sortQuestions(questions) {
 function normalizeQuestion(id, data = {}) {
   const fallbackIndex = Number(id.replace("q", "")) || 0;
   const fallback = FALLBACK_QUESTIONS.find((question) => question.id === id);
-  const text = typeof data.text === "string" && data.text.trim() ? data.text.trim() : fallback ? fallback.text : id;
+  const overrideText = QUESTION_TEXT_OVERRIDES[id];
+  const text =
+    typeof overrideText === "string" && overrideText.trim()
+      ? overrideText.trim()
+      : typeof data.text === "string" && data.text.trim()
+        ? data.text.trim()
+        : fallback
+          ? fallback.text
+          : id;
   const order = typeof data.order === "number" ? data.order : fallback ? fallback.order : fallbackIndex;
   const category =
     typeof data.category === "string" && data.category.trim() ? data.category.trim() : fallback?.category || "";

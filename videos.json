@@ -4,14 +4,14 @@
     "correctAnswerValue": 31
   },
   "q4": {
-    "correctAnswerValue": 26,
+    "correctAnswerValue": 0,
     "videos": [
       {
-        "src": "videos/q4-first-10s.mp4",
+        "src": "videos/q9-first-10s.mp4",
         "label": "Intro"
       },
       {
-        "src": "videos/q4.mp4",
+        "src": "videos/q9.mp4",
         "label": "Slutning"
       }
     ]
@@ -34,14 +34,14 @@
     "correctAnswerValue": 226
   },
   "q9": {
-    "correctAnswerValue": 0,
+    "correctAnswerValue": 26,
     "videos": [
       {
-        "src": "videos/q9-first-10s.mp4",
+        "src": "videos/q4-first-10s.mp4",
         "label": "Intro"
       },
       {
-        "src": "videos/q9.mp4",
+        "src": "videos/q4.mp4",
         "label": "Slutning"
       }
     ]
