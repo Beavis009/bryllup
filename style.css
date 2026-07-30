@@ -499,6 +499,40 @@ h3 {
   margin: 0;
 }
 
+.dashboard-lock[hidden] {
+  display: none;
+}
+
+.dashboard-lock {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.dashboard-lock-card {
+  width: min(100%, 420px);
+  background: rgba(18, 26, 41, 0.96);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.36);
+  padding: 1.4rem;
+}
+
+.dashboard-lock-card h1 {
+  font-size: 2rem;
+  line-height: 1.05;
+}
+
+.dashboard-lock-card input {
+  font-size: 1.35rem;
+  text-align: center;
+}
+
+.dashboard-lock-card button {
+  width: 100%;
+}
+
 form {
   display: grid;
   gap: 0.9rem;

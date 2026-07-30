@@ -7,8 +7,28 @@
     <title>Bryllupsquiz</title>
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body>
-    <main class="page home-page">
+  <body class="dashboard-locked">
+    <section id="dashboard-lock" class="dashboard-lock" aria-labelledby="dashboard-lock-title">
+      <form id="dashboard-lock-form" class="dashboard-lock-card" autocomplete="off">
+        <p class="eyebrow">Bryllupsquiz</p>
+        <h1 id="dashboard-lock-title">Indtast kode</h1>
+        <label>
+          <span>Kode</span>
+          <input
+            id="dashboard-lock-code"
+            type="password"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            autocomplete="off"
+            required
+          />
+        </label>
+        <button type="submit">Lås op</button>
+        <p id="dashboard-lock-status" class="status-text" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <main id="dashboard-page" class="page home-page" hidden aria-hidden="true">
       <header class="dashboard-topbar">
         <div>
           <p class="eyebrow">Bryllupsquiz</p>

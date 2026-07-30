@@ -1,6 +1,8 @@
 ﻿const FIREBASE_SDK_VERSION = "12.16.0";
 const QUESTION_ID_PATTERN = /^q(0|[1-9]|1[0-2])$/;
 const QUESTION_TYPES = ["number", "time"];
+const DASHBOARD_ACCESS_CODE = "1234";
+const DASHBOARD_ACCESS_STORAGE_KEY = "bryllup-dashboard-unlocked";
 const FALLBACK_QUESTIONS = [
   {
     id: "q0",
@@ -95,6 +97,11 @@ const FALLBACK_QUESTIONS = [
   }
 ];
 
+const dashboardLockEl = document.getElementById("dashboard-lock");
+const dashboardLockFormEl = document.getElementById("dashboard-lock-form");
+const dashboardLockCodeInputEl = document.getElementById("dashboard-lock-code");
+const dashboardLockStatusEl = document.getElementById("dashboard-lock-status");
+const dashboardPageEl = document.getElementById("dashboard-page");
 const qrImage = document.getElementById("qr-code");
 const qrOpenBtn = document.getElementById("qr-open");
 const startBtn = document.getElementById("start-quiz");
@@ -156,12 +163,101 @@ let firebaseState = null;
 let winnerStatusTimer;
 let resetStatusTimer;
 let openVideoQuestionId = "";
+let dashboardStarted = false;
 
 function hasFirebaseConfig(config) {
   return ["apiKey", "authDomain", "databaseURL", "projectId", "appId"].every((key) => {
     const value = config[key];
     return typeof value === "string" && value.trim().length > 0;
   });
+}
+
+function isDashboardUnlocked() {
+  try {
+    return window.sessionStorage.getItem(DASHBOARD_ACCESS_STORAGE_KEY) === "true";
+  } catch (error) {
+    return false;
+  }
+}
+
+function rememberDashboardUnlock() {
+  try {
+    window.sessionStorage.setItem(DASHBOARD_ACCESS_STORAGE_KEY, "true");
+  } catch (error) {
+    // Session storage can be unavailable in strict browser modes.
+  }
+}
+
+function showDashboardLockStatus(message) {
+  if (dashboardLockStatusEl) {
+    dashboardLockStatusEl.textContent = message;
+  }
+}
+
+function revealDashboard() {
+  document.body.classList.remove("dashboard-locked");
+
+  if (dashboardLockEl) {
+    dashboardLockEl.hidden = true;
+  }
+
+  if (dashboardPageEl) {
+    dashboardPageEl.hidden = false;
+    dashboardPageEl.removeAttribute("aria-hidden");
+  }
+}
+
+async function startDashboard() {
+  if (dashboardStarted) {
+    return;
+  }
+
+  dashboardStarted = true;
+  revealDashboard();
+  setupQrCode();
+  await loadStaticQuestionVideos();
+  initFirebase();
+}
+
+function handleDashboardLockSubmit(event) {
+  event.preventDefault();
+
+  const value = dashboardLockCodeInputEl ? dashboardLockCodeInputEl.value.trim() : "";
+
+  if (value === DASHBOARD_ACCESS_CODE) {
+    rememberDashboardUnlock();
+    showDashboardLockStatus("");
+    startDashboard();
+    return;
+  }
+
+  showDashboardLockStatus("Forkert kode.");
+
+  if (dashboardLockCodeInputEl) {
+    dashboardLockCodeInputEl.value = "";
+    dashboardLockCodeInputEl.focus();
+  }
+}
+
+function initDashboardLock() {
+  if (!dashboardLockEl || !dashboardPageEl || !dashboardLockFormEl) {
+    startDashboard();
+    return;
+  }
+
+  if (isDashboardUnlocked()) {
+    startDashboard();
+    return;
+  }
+
+  dashboardLockEl.hidden = false;
+  dashboardPageEl.hidden = true;
+  dashboardPageEl.setAttribute("aria-hidden", "true");
+  document.body.classList.add("dashboard-locked");
+
+  if (dashboardLockCodeInputEl) {
+    dashboardLockCodeInputEl.focus({ preventScroll: true });
+  }
 }
 
 function getGuestEntryUrl() {
@@ -1344,6 +1440,9 @@ async function initFirebase() {
   }
 }
 
+if (dashboardLockFormEl) {
+  dashboardLockFormEl.addEventListener("submit", handleDashboardLockSubmit);
+}
 startBtn.addEventListener("click", () => {
   window.location.href = getGuestEntryUrl();
 });
@@ -1406,8 +1505,4 @@ window.addEventListener("keydown", (event) => {
     closeWinnerModal();
   }
 });
-window.addEventListener("load", async () => {
-  setupQrCode();
-  await loadStaticQuestionVideos();
-  initFirebase();
-});
+window.addEventListener("load", initDashboardLock);
