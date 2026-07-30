@@ -962,15 +962,15 @@ function renderWinnerPanel(activeQuestion, activeAnswers) {
   }
 
   if (usesPredefinedAnswer) {
-    if (!inputIsFocused && hasPredefinedAnswer) {
-      winnerTargetInputEl.value = String(predefinedAnswerValue);
+    if (!inputIsFocused) {
+      winnerTargetInputEl.value = "";
     }
 
     winnerCurrentEl.replaceChildren(
       createEmptyMessage(
         hasPredefinedAnswer
-          ? `Facit: ${formatAnswerValue(activeQuestion.type, predefinedAnswerValue)}`
-          : "Facit mangler for dette spørgsmål."
+          ? "Klar til at annoncere vinder."
+          : "Resultat mangler for dette spørgsmål."
       )
     );
     return;
@@ -1369,7 +1369,7 @@ async function saveWinner(event) {
   if (correctAnswerValue === null) {
     showWinnerStatus(
       usesPredefinedAnswer
-        ? "Facit mangler for dette spørgsmål."
+        ? "Resultat mangler for dette spørgsmål."
         : activeQuestion.type === "time"
           ? "Skriv det rigtige svar som hele sekunder."
           : "Skriv det rigtige svar som et tal."
