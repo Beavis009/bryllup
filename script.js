@@ -106,6 +106,7 @@ const firebaseSettings = {
   questionsPath: "questions",
   activeQuestionPath: "activeQuestion",
   answersPath: "answers",
+  participantsPath: "participants",
   submissionsPath: "submissions",
   ...(window.firebaseSettings || {})
 };
@@ -139,6 +140,14 @@ function getCookie(name) {
     ?.slice(prefix.length);
 }
 
+function setCookie(name, value, maxAgeSeconds) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; Max-Age=${maxAgeSeconds}; Path=/; SameSite=Lax`;
+}
+
+function clearCookie(name) {
+  setCookie(name, "", 0);
+}
+
 function readParticipantCookie() {
   const rawValue = getCookie(PARTICIPANT_COOKIE_NAME);
   if (!rawValue) {
@@ -158,6 +167,10 @@ function readParticipantCookie() {
   }
 
   return null;
+}
+
+function clearParticipantCookie() {
+  clearCookie(PARTICIPANT_COOKIE_NAME);
 }
 
 function getJoinUrl() {
@@ -579,7 +592,6 @@ async function initFirebase() {
     return;
   }
 
-  showQuizStep();
   setQuizDisabled(true);
 
   if (!hasFirebaseConfig(firebaseConfig)) {
@@ -600,6 +612,7 @@ async function initFirebase() {
     const activeQuestionRef = database.ref(db, firebaseSettings.activeQuestionPath);
     const answersRef = database.ref(db, firebaseSettings.answersPath);
     const submissionsRef = database.ref(db, firebaseSettings.submissionsPath);
+    const participantRef = database.ref(db, `${firebaseSettings.participantsPath}/${participant.id}`);
 
     firebaseState = {
       getAnswerRef: (questionId, participantId) =>
@@ -608,6 +621,19 @@ async function initFirebase() {
       runTransaction: database.runTransaction,
       serverTimestamp: database.serverTimestamp
     };
+
+    showAnswerStatus("Tjekker bruger...", { persistent: true });
+    const participantSnapshot = await database.get(participantRef);
+
+    if (!participantSnapshot.exists()) {
+      clearParticipantCookie();
+      participant = null;
+      showAnswerStatus("Din bruger er nulstillet. Sender dig til navn...", { persistent: true });
+      window.setTimeout(redirectToJoinPage, 700);
+      return;
+    }
+
+    showQuizStep();
 
     firebaseState.onValue(
       questionsRef,

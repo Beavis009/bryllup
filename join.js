@@ -34,6 +34,10 @@ function setCookie(name, value, maxAgeSeconds) {
   document.cookie = `${name}=${encodeURIComponent(value)}; Max-Age=${maxAgeSeconds}; Path=/; SameSite=Lax`;
 }
 
+function clearCookie(name) {
+  setCookie(name, "", 0);
+}
+
 function readParticipantCookie() {
   const rawValue = getCookie(PARTICIPANT_COOKIE_NAME);
   if (!rawValue) {
@@ -57,6 +61,10 @@ function readParticipantCookie() {
 
 function saveParticipantCookie(participant) {
   setCookie(PARTICIPANT_COOKIE_NAME, JSON.stringify(participant), 60 * 60 * 24 * 365);
+}
+
+function clearParticipantCookie() {
+  clearCookie(PARTICIPANT_COOKIE_NAME);
 }
 
 function getCleanPageUrl() {
@@ -114,12 +122,16 @@ async function createParticipant(name) {
   };
 }
 
-async function initFirebase() {
-  if (readParticipantCookie()) {
-    redirectToAnswerPage();
-    return;
+async function participantExists(participantId) {
+  if (!participantId || !firebaseState) {
+    return false;
   }
 
+  const snapshot = await firebaseState.get(firebaseState.getParticipantRef(participantId));
+  return snapshot.exists();
+}
+
+async function initFirebase() {
   setIdentityDisabled(true);
 
   if (!hasFirebaseConfig(firebaseConfig)) {
@@ -139,13 +151,31 @@ async function initFirebase() {
 
     firebaseState = {
       participantsRef: database.ref(db, firebaseSettings.participantsPath),
+      getParticipantRef: (participantId) => database.ref(db, `${firebaseSettings.participantsPath}/${participantId}`),
+      get: database.get,
       push: database.push,
       serverTimestamp: database.serverTimestamp,
       set: database.set
     };
 
+    const cachedParticipant = readParticipantCookie();
+
+    if (cachedParticipant) {
+      showIdentityStatus("Tjekker gemt bruger...", { persistent: true });
+
+      if (await participantExists(cachedParticipant.id)) {
+        redirectToAnswerPage();
+        return;
+      }
+
+      clearParticipantCookie();
+      nameInput.value = cachedParticipant.name;
+      showIdentityStatus("Din gamle bruger var nulstillet. Gem dit navn igen.");
+    } else {
+      showIdentityStatus("");
+    }
+
     setIdentityDisabled(false);
-    showIdentityStatus("");
     nameInput.focus();
   } catch (error) {
     setIdentityDisabled(true);
