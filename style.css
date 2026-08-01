@@ -1006,6 +1006,40 @@ button.secondary,
   overflow-wrap: anywhere;
 }
 
+.stopwatch-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.stopwatch-panel .board-header {
+  margin-bottom: 0;
+}
+
+.stopwatch-time {
+  background: rgba(36, 40, 55, 0.78);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--accent);
+  font-size: 3.2rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+  padding: 0.85rem 1rem;
+  text-align: center;
+}
+
+.stopwatch-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.stopwatch-actions button {
+  width: 100%;
+  min-height: 2.65rem;
+  padding-inline: 0.45rem;
+}
+
 .reset-panel {
   margin-bottom: 0;
 }
@@ -1111,6 +1145,7 @@ button.secondary,
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
+  .stopwatch-actions,
   .reset-actions {
     grid-template-columns: 1fr;
   }

@@ -130,6 +130,10 @@ const resetAnswersBtn = document.getElementById("reset-answers");
 const resetWinnersBtn = document.getElementById("reset-winners");
 const resetParticipantsBtn = document.getElementById("reset-participants");
 const resetStatusEl = document.getElementById("reset-status");
+const stopwatchTimeEl = document.getElementById("stopwatch-time");
+const stopwatchStartBtn = document.getElementById("stopwatch-start");
+const stopwatchStopBtn = document.getElementById("stopwatch-stop");
+const stopwatchResetBtn = document.getElementById("stopwatch-reset");
 const videoModalEl = document.getElementById("video-modal");
 const videoModalLabelEl = document.getElementById("video-modal-label");
 const videoModalTitleEl = document.getElementById("video-modal-title");
@@ -170,6 +174,9 @@ let winnerStatusTimer;
 let resetStatusTimer;
 let openVideoQuestionId = "";
 let dashboardStarted = false;
+let stopwatchElapsedMs = 0;
+let stopwatchStartedAt = 0;
+let stopwatchTimerId = 0;
 
 function hasFirebaseConfig(config) {
   return ["apiKey", "authDomain", "databaseURL", "projectId", "appId"].every((key) => {
@@ -1544,6 +1551,54 @@ async function initFirebase() {
   }
 }
 
+function getStopwatchElapsedMs() {
+  return stopwatchTimerId ? stopwatchElapsedMs + Date.now() - stopwatchStartedAt : stopwatchElapsedMs;
+}
+
+function renderStopwatch() {
+  if (!stopwatchTimeEl) {
+    return;
+  }
+
+  const elapsedMs = getStopwatchElapsedMs();
+  const elapsedSeconds = Math.floor(elapsedMs / 1000);
+  const isRunning = Boolean(stopwatchTimerId);
+
+  stopwatchTimeEl.textContent = `${elapsedSeconds} sek`;
+  stopwatchStartBtn.disabled = isRunning;
+  stopwatchStopBtn.disabled = !isRunning;
+  stopwatchResetBtn.disabled = !isRunning && elapsedMs === 0;
+}
+
+function startStopwatch() {
+  if (stopwatchTimerId) {
+    return;
+  }
+
+  stopwatchStartedAt = Date.now();
+  stopwatchTimerId = window.setInterval(renderStopwatch, 250);
+  renderStopwatch();
+}
+
+function stopStopwatch() {
+  if (!stopwatchTimerId) {
+    return;
+  }
+
+  stopwatchElapsedMs = getStopwatchElapsedMs();
+  window.clearInterval(stopwatchTimerId);
+  stopwatchTimerId = 0;
+  renderStopwatch();
+}
+
+function resetStopwatch() {
+  window.clearInterval(stopwatchTimerId);
+  stopwatchElapsedMs = 0;
+  stopwatchStartedAt = 0;
+  stopwatchTimerId = 0;
+  renderStopwatch();
+}
+
 if (dashboardLockFormEl) {
   dashboardLockFormEl.addEventListener("submit", handleDashboardLockSubmit);
 }
@@ -1576,6 +1631,9 @@ winnerFormEl.addEventListener("submit", saveWinner);
 resetAnswersBtn.addEventListener("click", () => resetQuizData("answers"));
 resetWinnersBtn.addEventListener("click", () => resetQuizData("winners"));
 resetParticipantsBtn.addEventListener("click", () => resetQuizData("participants"));
+stopwatchStartBtn.addEventListener("click", startStopwatch);
+stopwatchStopBtn.addEventListener("click", stopStopwatch);
+stopwatchResetBtn.addEventListener("click", resetStopwatch);
 videoModalCloseBtn.addEventListener("click", closeVideoModal);
 videoModalEl.addEventListener("click", (event) => {
   if (event.target.closest("[data-video-close]")) {
@@ -1611,4 +1669,7 @@ window.addEventListener("keydown", (event) => {
     closeWinnerModal();
   }
 });
-window.addEventListener("load", initDashboardLock);
+window.addEventListener("load", () => {
+  renderStopwatch();
+  initDashboardLock();
+});
