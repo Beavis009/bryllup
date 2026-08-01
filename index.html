@@ -39,10 +39,18 @@
       <div class="dashboard-layout">
         <section class="dashboard-main">
           <section class="panel question-strip-panel">
-            <div class="board-header">
+            <div class="board-header question-strip-header">
               <div>
                 <h2>Spørgsmål</h2>
                 <p class="muted-text">Vælg det aktive spørgsmål</p>
+              </div>
+              <div class="stopwatch-inline" aria-label="Stopur">
+                <div id="stopwatch-time" class="stopwatch-time" aria-live="polite">0 sek</div>
+                <div class="stopwatch-actions">
+                  <button id="stopwatch-start" type="button">Start</button>
+                  <button id="stopwatch-stop" type="button" class="secondary" disabled>Stop</button>
+                  <button id="stopwatch-reset" type="button" class="secondary" disabled>Nulstil</button>
+                </div>
               </div>
             </div>
             <div id="question-activation" class="activation-grid question-rail"></div>
@@ -107,21 +115,6 @@
             </div>
             <div id="participants-list" class="participant-list">
               <p class="empty">Ingen deltagere endnu.</p>
-            </div>
-          </section>
-
-          <section class="panel stopwatch-panel">
-            <div class="board-header">
-              <div>
-                <h2>Stopur</h2>
-                <p class="muted-text">Tæller op i sekunder</p>
-              </div>
-            </div>
-            <div id="stopwatch-time" class="stopwatch-time" aria-live="polite">0 sek</div>
-            <div class="stopwatch-actions">
-              <button id="stopwatch-start" type="button">Start</button>
-              <button id="stopwatch-stop" type="button" class="secondary" disabled>Stop</button>
-              <button id="stopwatch-reset" type="button" class="secondary" disabled>Nulstil</button>
             </div>
           </section>
 
